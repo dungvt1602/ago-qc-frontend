@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+  <title>AGO QC App</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <div class="brand">ago<span>fruit</span></div>
+      <div class="subtitle">QC App - tạo hồ sơ PDF song ngữ</div>
+    </div>
+    <button id="refreshBtn" class="ghost">Tải lại</button>
+  </header>
+
+  <main id="app" class="app"></main>
+
+  <div id="cameraModal" class="modal hidden">
+    <div class="modal-card camera-card">
+      <div class="modal-head">
+        <div>
+          <b id="cameraTitle">Chụp ảnh QC</b>
+          <div id="cameraSub" class="muted"></div>
+        </div>
+        <button id="closeCamera" class="ghost danger">Đóng</button>
+      </div>
+      <video id="cameraVideo" autoplay playsinline></video>
+      <canvas id="captureCanvas" class="hidden"></canvas>
+      <img id="photoPreview" class="hidden photo-preview" alt="Preview">
+      <div class="camera-actions">
+        <button id="captureBtn" class="primary">📷 Chụp ảnh</button>
+        <button id="retakeBtn" class="ghost hidden">Chụp lại</button>
+        <button id="usePhotoBtn" class="primary hidden">Sử dụng ảnh</button>
+      </div>
+      <p class="note">Ảnh được chụp trực tiếp trong app, tự ghép mã lô, thời gian, nhân viên QC và hạng mục trước khi lưu.</p>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

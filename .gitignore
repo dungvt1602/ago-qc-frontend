@@ -1,0 +1,10 @@
+# Hệ điều hành
+.DS_Store
+Thumbs.db
+
+# Phụ thuộc (nếu lỡ chạy công cụ tạo ra)
+node_modules/
+
+# Log / tạm
+*.log
+*.tmp
