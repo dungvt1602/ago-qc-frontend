@@ -303,11 +303,18 @@ function renderOverviewSection(d){
 }
 
 function renderExportSection(d){
+  const f = d.qcFile;
   return `<div class="card">
     <h3>Xuất file PDF</h3>
-    <div class="note">Bấm xuất, chờ vài giây để server tạo PDF (lần đầu trong ngày có thể lâu hơn vì server vừa thức dậy). Tạo xong, link PDF hiện ngay bên dưới.</div>
-    <div class="actions"><button class="primary" onclick="exportPDF()">📄 Xuất PDF</button>${d.qcFile.PDF_URL ? `<a class="ghost" href="${d.qcFile.PDF_URL}" target="_blank">Mở PDF hiện tại</a>` : ''}</div>
-    <div class="note">Sau khi tạo xong, bấm <b>Mở PDF hiện tại</b> để xem hoặc tải về.</div>
+    <div class="note">Có 2 bản: <b>Nội bộ</b> (đầy đủ thống kê + nhận xét) và <b>Khách hàng</b> (gọn — bỏ thống kê và nhận xét nội bộ). Lần đầu trong ngày tạo có thể lâu hơn vì server vừa thức dậy.</div>
+    <div class="actions" style="margin-top:10px">
+      <button class="primary" onclick="exportPDF('internal')">📄 Xuất PDF nội bộ</button>
+      ${f.PDF_URL ? `<a class="ghost" href="${f.PDF_URL}" target="_blank">Mở bản nội bộ</a>` : ''}
+    </div>
+    <div class="actions" style="margin-top:10px">
+      <button class="primary" onclick="exportPDF('customer')">📄 Xuất PDF khách hàng</button>
+      ${f.PDF_URL_CUSTOMER ? `<a class="ghost" href="${f.PDF_URL_CUSTOMER}" target="_blank">Mở bản khách hàng</a>` : ''}
+    </div>
   </div>`;
 }
 
@@ -531,19 +538,20 @@ async function saveContainerItem(photoNo){
   }catch(err){ setErr(err); renderDetail(); }
 }
 
-async function exportPDF(){
+async function exportPDF(variant){
   if (!state.current || !state.current.qcFile || !state.current.qcFile.ID) {
     setErr('Chưa chọn hồ sơ QC.');
     renderDetail();
     return;
   }
+  const isCustomer = variant === 'customer';
   try{
-    // Gọi thẳng backend (server thật, không bị timeout). Trả về hồ sơ đã cập nhật link PDF.
-    state.current = await api('exportPDF', { qcFileId: state.current.qcFile.ID });
-    const url = state.current.qcFile.PDF_URL;
-    setMsg('Đã tạo PDF xong. Bấm "Mở PDF hiện tại" để xem hoặc tải về.');
+    // Gọi thẳng backend, kèm loại bản (nội bộ / khách hàng). Trả về hồ sơ đã cập nhật link PDF.
+    state.current = await api('exportPDF', { qcFileId: state.current.qcFile.ID, variant });
+    const url = isCustomer ? state.current.qcFile.PDF_URL_CUSTOMER : state.current.qcFile.PDF_URL;
+    setMsg(isCustomer ? 'Đã tạo PDF khách hàng. Bấm "Mở bản khách hàng" để xem/tải.' : 'Đã tạo PDF nội bộ. Bấm "Mở bản nội bộ" để xem/tải.');
     renderDetail();
-    // Thử mở tab mới; nếu bị trình duyệt chặn popup thì link "Mở PDF hiện tại" vẫn dùng được.
+    // Thử mở tab mới; nếu bị chặn popup thì link bên dưới vẫn dùng được.
     if (url) window.open(url, '_blank');
   }catch(err){ setErr(err); renderDetail(); }
 }
