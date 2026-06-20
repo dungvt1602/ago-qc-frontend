@@ -125,7 +125,10 @@ function fileCard(f){
     </div>
     <div>${escapeHtml(f.PRODUCT_NAME || 'Chưa nhập sản phẩm')}</div>
     <div class="muted">PO: ${escapeHtml(f.PO_NO || '-')} | NCC: ${escapeHtml(f.SUPPLIER || '-')} | Ngày tạo: ${escapeHtml(f.CREATED_AT || '')}</div>
-    ${f.PDF_URL ? `<a href="${f.PDF_URL}" target="_blank" onclick="event.stopPropagation()">Mở PDF</a>` : ''}
+    <div class="row" style="margin-top:6px">
+      ${f.PDF_URL ? `<a href="${f.PDF_URL}" target="_blank" onclick="event.stopPropagation()">Mở PDF</a>` : ''}
+      <button class="ghost danger small-btn" onclick="event.stopPropagation(); deleteFile('${f.ID}','${escapeAttr(f.LOT_CODE || f.QC_FILE_NO || '')}')">🗑 Xóa hồ sơ</button>
+    </div>
   </div>`;
 }
 
@@ -387,7 +390,16 @@ function renderDailySessionDetail(d){
   if (state.activeDailyItemCode) return renderDailyItemDetail(sess);
   return `<div class="card">
     <div class="between"><h3>${escapeHtml(sess.QC_DATE)} - ${escapeHtml(sess.WAREHOUSE)}</h3><button class="ghost small-btn" onclick="state.activeDailyId=null;renderDetail()">Quay lại danh sách ngày</button></div>
-    <div class="note">Chọn từng hạng mục để mở màn hình nhập riêng.</div>
+    <div class="note">Chọn từng hạng mục để mở màn hình nhập riêng. Có thể sửa ngày/kho/nhân viên của phiên ngay bên dưới.</div>
+    <form id="editDailyForm" class="grid3" style="margin:8px 0">
+      ${input('qcDate','Ngày QC / QC date', sess.QC_DATE, false, 'date')}
+      ${input('warehouse','Kho/Cơ sở / Warehouse', sess.WAREHOUSE)}
+      ${input('qcStaff','Nhân viên QC / QC staff', sess.QC_STAFF)}
+    </form>
+    <div class="row" style="margin-bottom:8px">
+      <button class="ghost small-btn" onclick="saveSession('${sess.ID}')">Lưu sửa phiên</button>
+      <button class="ghost danger small-btn" onclick="deleteSession('${sess.ID}')">🗑 Xóa phiên này</button>
+    </div>
     <div class="stack">
       ${(sess.items || []).map(it => renderDailyItemCard(sess, it)).join('')}
     </div>
@@ -412,7 +424,10 @@ function renderDailyItemDetail(sess){
     <div class="muted">${escapeHtml(it.ITEM_NAME_EN)} | ${escapeHtml(sess.QC_DATE)} - ${escapeHtml(sess.WAREHOUSE)}</div>
     <div class="qc-body single-form">
       ${savedPhotoHtml(it)}
-      <button class="primary" onclick="openCameraDaily('${sess.ID}','${it.ITEM_CODE}')">📷 Chụp ảnh mục này</button>
+      <div class="row">
+        <button class="primary" onclick="openCameraDaily('${sess.ID}','${it.ITEM_CODE}')">📷 ${hasPhoto ? 'Chụp lại' : 'Chụp ảnh mục này'}</button>
+        ${hasPhoto ? `<button class="ghost danger" onclick="deletePhotoDaily('${sess.ID}','${it.ITEM_CODE}')">🗑 Xóa ảnh</button>` : ''}
+      </div>
       <div class="grid2">
         <div class="field"><label>Tỷ lệ đạt / Pass rate</label><input id="pass_${sess.ID}_${it.ITEM_CODE}" value="${escapeAttr(it.PASS_RATE)}"></div>
         <div class="field"><label>Tỷ lệ không đạt / Fail rate</label><input id="fail_${sess.ID}_${it.ITEM_CODE}" value="${escapeAttr(it.FAIL_RATE)}"></div>
@@ -470,7 +485,10 @@ function renderContainerItemDetail(d){
     <div class="qc-body single-form">
       <div>${escapeHtml(it.DESCRIPTION_VI)} / ${escapeHtml(it.DESCRIPTION_EN)}</div>
       ${savedPhotoHtml(it)}
-      <button class="primary" onclick="openCameraContainer(${no})">📷 Chụp ảnh mục này</button>
+      <div class="row">
+        <button class="primary" onclick="openCameraContainer(${no})">📷 ${hasPhoto ? 'Chụp lại' : 'Chụp ảnh mục này'}</button>
+        ${hasPhoto ? `<button class="ghost danger" onclick="deletePhotoContainer(${no})">🗑 Xóa ảnh</button>` : ''}
+      </div>
       <div class="grid2">
         <div class="field"><label>Tỷ lệ đạt</label><input id="cpass_${no}" value="${escapeAttr(it.PASS_RATE)}"></div>
         <div class="field"><label>Tỷ lệ không đạt</label><input id="cfail_${no}" value="${escapeAttr(it.FAIL_RATE)}"></div>
@@ -640,6 +658,53 @@ function escapeHtml(s=''){
 }
 function escapeAttr(s=''){ return escapeHtml(s).replace(/`/g,'&#96;'); }
 
+async function deleteFile(id, lot){
+  if (!confirm(`Xóa hồ sơ "${lot}"?\nToàn bộ ngày QC, ảnh và thống kê của hồ sơ này sẽ bị xóa và KHÔNG khôi phục được.`)) return;
+  try{
+    await api('deleteQCFile', { qcFileId: id });
+    setMsg('Đã xóa hồ sơ.');
+    await loadFiles();
+  }catch(err){ setErr(err); renderList(); }
+}
+
+async function saveSession(dailyQcId){
+  try{
+    const p = getFormData($('editDailyForm'));
+    p.dailyQcId = dailyQcId;
+    state.current = await api('updateDailyQC', p);
+    setMsg('Đã lưu sửa phiên QC.');
+    renderDetail();
+  }catch(err){ setErr(err); renderDetail(); }
+}
+
+async function deleteSession(dailyQcId){
+  if (!confirm('Xóa phiên QC này? Các hạng mục và ảnh trong phiên sẽ bị xóa.')) return;
+  try{
+    state.current = await api('deleteDailyQC', { dailyQcId });
+    state.activeDailyId = null;
+    setMsg('Đã xóa phiên QC.');
+    renderDetail();
+  }catch(err){ setErr(err); renderDetail(); }
+}
+
+async function deletePhotoDaily(dailyQcId, itemCode){
+  if (!confirm('Xóa ảnh của mục này?')) return;
+  try{
+    state.current = await api('deletePhoto', { targetType:'daily', dailyQcId, itemCode });
+    setMsg('Đã xóa ảnh.');
+    renderDetail();
+  }catch(err){ setErr(err); renderDetail(); }
+}
+
+async function deletePhotoContainer(photoNo){
+  if (!confirm('Xóa ảnh của mục này?')) return;
+  try{
+    state.current = await api('deletePhoto', { targetType:'container', qcFileId: state.current.qcFile.ID, photoNo });
+    setMsg('Đã xóa ảnh.');
+    renderDetail();
+  }catch(err){ setErr(err); renderDetail(); }
+}
+
 window.renderCreate = renderCreate;
 window.renderList = renderList;
 window.openFile = openFile;
@@ -657,5 +722,10 @@ window.backToMenu = backToMenu;
 window.openDailySessionView = openDailySessionView;
 window.openDailyItemView = openDailyItemView;
 window.openContainerItemView = openContainerItemView;
+window.deleteFile = deleteFile;
+window.saveSession = saveSession;
+window.deleteSession = deleteSession;
+window.deletePhotoDaily = deletePhotoDaily;
+window.deletePhotoContainer = deletePhotoContainer;
 
 init();
