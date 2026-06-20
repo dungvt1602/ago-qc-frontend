@@ -83,10 +83,27 @@ function showLoader(text) {
   el.textContent = text;
 }
 function hideLoader(){ const el = document.querySelector('.loader'); if (el) el.remove(); }
-function setMsg(msg){ state.message = msg; state.error = ''; }
-function setErr(err){ state.error = String(err.message || err); state.message = ''; }
-function flash(){
-  return `${state.error ? `<div class="error">${escapeHtml(state.error)}</div>` : ''}${state.message ? `<div class="success">${escapeHtml(state.message)}</div>` : ''}`;
+function setMsg(msg){ state.message = ''; state.error = ''; showToast(msg, 'success'); }
+function setErr(err){ state.message = ''; state.error = ''; showToast(String(err && err.message ? err.message : err), 'error'); }
+function flash(){ return ''; } // thông báo giờ hiện bằng toast, không còn banner trên thanh
+
+// Toast nổi rồi tự biến mất. Gắn vào body (không vào #app) nên không bị xóa khi vẽ lại màn hình.
+function showToast(message, type = 'success'){
+  if (!message) return;
+  let wrap = document.querySelector('.toast-wrap');
+  if (!wrap){ wrap = document.createElement('div'); wrap.className = 'toast-wrap'; document.body.appendChild(wrap); }
+  const el = document.createElement('div');
+  el.className = `toast toast-${type}`;
+  el.textContent = message;
+  el.onclick = () => dismissToast(el); // bấm để tắt sớm
+  wrap.appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => dismissToast(el), type === 'error' ? 5000 : 3000);
+}
+function dismissToast(el){
+  if (!el) return;
+  el.classList.remove('show');
+  setTimeout(() => el.remove(), 250);
 }
 
 async function init(){
