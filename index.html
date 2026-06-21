@@ -17,24 +17,25 @@
 
   <main id="app" class="app"></main>
 
+  <!-- Input ẩn: mở thẳng camera điện thoại (ổn định trong Zalo/Telegram/Facebook) -->
+  <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
+
   <div id="cameraModal" class="modal hidden">
     <div class="modal-card camera-card">
       <div class="modal-head">
         <div>
-          <b id="cameraTitle">Chụp ảnh QC</b>
+          <b id="cameraTitle">Ảnh QC</b>
           <div id="cameraSub" class="muted"></div>
         </div>
         <button id="closeCamera" class="ghost danger">Đóng</button>
       </div>
-      <video id="cameraVideo" autoplay playsinline></video>
       <canvas id="captureCanvas" class="hidden"></canvas>
       <img id="photoPreview" class="hidden photo-preview" alt="Preview">
       <div class="camera-actions">
-        <button id="captureBtn" class="primary">📷 Chụp ảnh</button>
-        <button id="retakeBtn" class="ghost hidden">Chụp lại</button>
-        <button id="usePhotoBtn" class="primary hidden">Sử dụng ảnh</button>
+        <button id="retakeBtn" class="ghost">📷 Chụp lại</button>
+        <button id="usePhotoBtn" class="primary">Sử dụng ảnh</button>
       </div>
-      <p class="note">Ảnh được chụp trực tiếp trong app, tự ghép mã lô, thời gian, nhân viên QC và hạng mục trước khi lưu.</p>
+      <p class="note">Bấm sẽ mở camera điện thoại để chụp. Ảnh tự ghép mã lô, thời gian, nhân viên QC và hạng mục trước khi lưu.</p>
     </div>
   </div>
 

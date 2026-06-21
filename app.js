@@ -560,63 +560,69 @@ function openCameraDaily(dailyQcId,itemCode){
   const sess = state.current.dailySessions.find(x => x.ID === dailyQcId);
   const item = sess.items.find(x => x.ITEM_CODE === itemCode);
   cameraTarget = { targetType:'daily', dailyQcId, itemCode, title: item.ITEM_NAME_VI, subtitle: `${sess.QC_DATE} - ${sess.WAREHOUSE}` };
-  openCamera();
+  startCapture();
 }
 function openCameraContainer(photoNo){
   const it = state.current.containerItems.find(x => Number(x.PHOTO_NO) === Number(photoNo));
   cameraTarget = { targetType:'container', photoNo, title: it.ITEM_NAME_VI, subtitle: it.DESCRIPTION_VI };
-  openCamera();
+  startCapture();
 }
 
-async function openCamera(){
+// Mở camera điện thoại qua input file (ổn định trong trình duyệt-trong-app Zalo/Telegram/Facebook).
+// KHÔNG dùng getUserMedia (hay crash/đóng webview).
+function startCapture(){
+  const input = $('cameraInput');
+  input.value = ''; // reset để chụp lại cùng mục vẫn kích hoạt onchange
+  input.click();
+}
+
+// Sau khi người dùng chụp xong từ camera điện thoại.
+async function handleCaptureFile(e){
+  const file = e.target.files && e.target.files[0];
+  if (!file || !cameraTarget) return;
+  showLoader('Đang xử lý ảnh...');
   try{
-    capturedDataUrl = '';
+    capturedDataUrl = await processCaptureFile(file);
     $('cameraTitle').textContent = cameraTarget.title;
     $('cameraSub').textContent = cameraTarget.subtitle;
-    $('photoPreview').classList.add('hidden');
-    $('captureCanvas').classList.add('hidden');
-    $('cameraVideo').classList.remove('hidden');
-    $('captureBtn').classList.remove('hidden');
-    $('retakeBtn').classList.add('hidden');
-    $('usePhotoBtn').classList.add('hidden');
+    $('photoPreview').src = capturedDataUrl;
+    $('photoPreview').classList.remove('hidden');
     $('cameraModal').classList.remove('hidden');
-    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-    $('cameraVideo').srcObject = cameraStream;
-  }catch(err){ alert('Không mở được camera. Hãy kiểm tra quyền camera và dùng HTTPS/Netlify.\n' + err.message); }
+  }catch(err){
+    alert('Không xử lý được ảnh, hãy thử lại.\n' + (err.message || err));
+  }finally{
+    hideLoader();
+  }
 }
 
-function closeCamera(){
-  if (cameraStream) cameraStream.getTracks().forEach(t => t.stop());
-  cameraStream = null;
-  $('cameraModal').classList.add('hidden');
+// Đọc file ảnh -> nén theo cạnh dài nhất -> đóng dấu -> trả dataURL JPG.
+function processCaptureFile(file){
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objUrl = URL.createObjectURL(file);
+    img.onload = () => {
+      try{
+        const w = img.naturalWidth || 1280;
+        const h = img.naturalHeight || 720;
+        const scale = Math.min(1, PHOTO_MAX_SIDE / Math.max(w, h));
+        const canvas = $('captureCanvas');
+        canvas.width = Math.round(w * scale);
+        canvas.height = Math.round(h * scale);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        drawStamp(ctx, canvas);
+        const url = canvas.toDataURL('image/jpeg', PHOTO_JPEG_QUALITY);
+        URL.revokeObjectURL(objUrl);
+        resolve(url);
+      }catch(err){ URL.revokeObjectURL(objUrl); reject(err); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error('Ảnh không hợp lệ')); };
+    img.src = objUrl;
+  });
 }
 
-$('closeCamera').addEventListener('click', closeCamera);
-$('captureBtn').addEventListener('click', capturePhoto);
-$('retakeBtn').addEventListener('click', () => {
-  capturedDataUrl = '';
-  $('photoPreview').classList.add('hidden');
-  $('cameraVideo').classList.remove('hidden');
-  $('captureBtn').classList.remove('hidden');
-  $('retakeBtn').classList.add('hidden');
-  $('usePhotoBtn').classList.add('hidden');
-});
-$('usePhotoBtn').addEventListener('click', usePhoto);
-
-function capturePhoto(){
-  const video = $('cameraVideo');
-  const canvas = $('captureCanvas');
-  const w = video.videoWidth || 1280;
-  const h = video.videoHeight || 720;
-
-  // Nén theo cạnh dài nhất, không chỉ theo chiều ngang.
-  // Ảnh điện thoại thường rất lớn; nếu đưa thẳng vào PDF sẽ làm file nặng.
-  const scale = Math.min(1, PHOTO_MAX_SIDE / Math.max(w, h));
-  canvas.width = Math.round(w * scale);
-  canvas.height = Math.round(h * scale);
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
+// Đóng dấu mã lô / thời gian / nhân viên QC vào góc dưới ảnh.
+function drawStamp(ctx, canvas){
   const stamp = makeStamp();
   const pad = Math.max(14, Math.round(canvas.width * 0.012));
   const lineH = Math.max(22, Math.round(canvas.width * 0.024));
@@ -626,16 +632,20 @@ function capturePhoto(){
   ctx.fillStyle = '#fff';
   ctx.font = `${Math.max(17, Math.round(canvas.width * 0.018))}px Arial`;
   stamp.forEach((line, i) => ctx.fillText(line, pad, canvas.height - boxH + pad + lineH * (i + .65)));
-
-  // Xuất JPG đã nén. Mỗi ảnh thường còn khoảng 120–350KB tùy cảnh chụp.
-  capturedDataUrl = canvas.toDataURL('image/jpeg', PHOTO_JPEG_QUALITY);
-  $('photoPreview').src = capturedDataUrl;
-  $('photoPreview').classList.remove('hidden');
-  $('cameraVideo').classList.add('hidden');
-  $('captureBtn').classList.add('hidden');
-  $('retakeBtn').classList.remove('hidden');
-  $('usePhotoBtn').classList.remove('hidden');
 }
+
+function closeCamera(){
+  $('cameraModal').classList.add('hidden');
+  $('photoPreview').src = '';        // giải phóng bộ nhớ ảnh
+  $('photoPreview').classList.add('hidden');
+  $('cameraInput').value = '';
+  capturedDataUrl = '';
+}
+
+$('closeCamera').addEventListener('click', closeCamera);
+$('cameraInput').addEventListener('change', handleCaptureFile);
+$('retakeBtn').addEventListener('click', startCapture);
+$('usePhotoBtn').addEventListener('click', usePhoto);
 
 function makeStamp(){
   const f = state.current.qcFile;
