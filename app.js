@@ -595,29 +595,49 @@ async function handleCaptureFile(e){
   }
 }
 
-// Đọc file ảnh -> nén theo cạnh dài nhất -> đóng dấu -> trả dataURL JPG.
+// Đọc file ảnh -> giảm kích thước -> đóng dấu -> trả dataURL JPG.
+// Có giới hạn thời gian để không bị "đứng" mãi nếu webview xử lý ảnh nặng bị lỗi.
 function processCaptureFile(file){
+  return Promise.race([
+    decodeAndStamp(file),
+    new Promise((_, reject) => setTimeout(
+      () => reject(new Error('Xử lý ảnh quá lâu. Hãy thử chụp lại.')), 30000)),
+  ]);
+}
+
+async function decodeAndStamp(file){
+  const drawable = await decodeImage(file);
+  const w = drawable.width || drawable.naturalWidth || 1280;
+  const h = drawable.height || drawable.naturalHeight || 720;
+  const scale = Math.min(1, PHOTO_MAX_SIDE / Math.max(w, h));
+  const canvas = $('captureCanvas');
+  canvas.width = Math.round(w * scale);
+  canvas.height = Math.round(h * scale);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(drawable, 0, 0, canvas.width, canvas.height);
+  if (drawable.close) drawable.close(); // giải phóng bitmap khỏi bộ nhớ
+  drawStamp(ctx, canvas);
+  return canvas.toDataURL('image/jpeg', PHOTO_JPEG_QUALITY);
+}
+
+// Giải mã ảnh. Ưu tiên createImageBitmap (nhanh, ít tốn bộ nhớ, không cần objectURL)
+// và giảm kích thước NGAY khi giải mã -> tránh treo với ảnh máy ảnh 12MP.
+function decodeImage(file){
+  if (typeof createImageBitmap === 'function'){
+    return createImageBitmap(file, { resizeWidth: PHOTO_MAX_SIDE, resizeQuality: 'high', imageOrientation: 'from-image' })
+      .catch(() => createImageBitmap(file))   // webview không nhận option -> giải mã thường
+      .catch(() => decodeViaImage(file));      // không hỗ trợ createImageBitmap -> dùng Image
+  }
+  return decodeViaImage(file);
+}
+
+function decodeViaImage(file){
   return new Promise((resolve, reject) => {
     const img = new Image();
-    const objUrl = URL.createObjectURL(file);
-    img.onload = () => {
-      try{
-        const w = img.naturalWidth || 1280;
-        const h = img.naturalHeight || 720;
-        const scale = Math.min(1, PHOTO_MAX_SIDE / Math.max(w, h));
-        const canvas = $('captureCanvas');
-        canvas.width = Math.round(w * scale);
-        canvas.height = Math.round(h * scale);
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-        drawStamp(ctx, canvas);
-        const url = canvas.toDataURL('image/jpeg', PHOTO_JPEG_QUALITY);
-        URL.revokeObjectURL(objUrl);
-        resolve(url);
-      }catch(err){ URL.revokeObjectURL(objUrl); reject(err); }
-    };
-    img.onerror = () => { URL.revokeObjectURL(objUrl); reject(new Error('Ảnh không hợp lệ')); };
-    img.src = objUrl;
+    const url = URL.createObjectURL(file);
+    img.onload = () => { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Ảnh không hợp lệ')); };
+    img.src = url;
   });
 }
 
