@@ -589,16 +589,15 @@ async function handleCaptureFile(e){
   showLoader('Đang xử lý ảnh...');
   try{
     capturedDataUrl = await processCaptureFile(file);
-    $('cameraTitle').textContent = cameraTarget.title;
-    $('cameraSub').textContent = cameraTarget.subtitle;
-    $('photoPreview').src = capturedDataUrl;
-    $('photoPreview').classList.remove('hidden');
-    $('cameraModal').classList.remove('hidden');
   }catch(err){
-    alert('Không xử lý được ảnh, hãy thử lại.\n' + (err.message || err));
-  }finally{
     hideLoader();
+    showToast('Không xử lý được ảnh, hãy chụp lại.', 'error');
+    return;
   }
+  hideLoader();
+  // Không hiện popup xem lại (camera điện thoại đã cho xem lại rồi).
+  // Áp dụng ảnh NGAY + upload ngầm -> nhanh, đỡ một lần bấm.
+  usePhoto();
 }
 
 // Đọc file ảnh -> giảm kích thước -> đóng dấu -> trả dataURL JPG.
