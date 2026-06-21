@@ -1,0 +1,17 @@
+{
+  "name": "AGO QC App",
+  "short_name": "AGO QC",
+  "description": "Tạo hồ sơ QC lô hàng và xuất PDF song ngữ",
+  "lang": "vi",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f8f3",
+  "theme_color": "#3f7f25",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

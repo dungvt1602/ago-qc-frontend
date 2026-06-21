@@ -830,4 +830,11 @@ window.deleteSession = deleteSession;
 window.deletePhotoDaily = deletePhotoDaily;
 window.deletePhotoContainer = deletePhotoContainer;
 
+// Đăng ký service worker để app cài được như app (PWA).
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
 init();
