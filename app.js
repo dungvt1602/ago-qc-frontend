@@ -48,29 +48,35 @@ const app = $('app');
 
 $('refreshBtn').addEventListener('click', () => loadFiles());
 
+// Gọi API có hiện loader (chặn) - dùng cho thao tác cần chờ kết quả.
 async function api(action, payload = {}) {
   showLoader('Đang xử lý...');
   try {
-    const res = await fetch(API_ENDPOINT, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, payload })
-    });
-    const text = await res.text();
-    let data;
-    try {
-      data = JSON.parse(text);
-    } catch (parseErr) {
-      throw new Error(`API trả về dữ liệu không phải JSON. HTTP ${res.status}. ${text.slice(0, 500)}`);
-    }
-    if (!res.ok) {
-      throw new Error(data.error || data.errorMessage || `API HTTP error ${res.status}`);
-    }
-    if (!data.ok) throw new Error(data.error || data.errorMessage || JSON.stringify(data).slice(0, 500) || 'API error');
-    return data.result;
+    return await apiCore(action, payload);
   } finally {
     hideLoader();
   }
+}
+
+// Gọi API KHÔNG hiện loader - dùng cho việc chạy ngầm (vd upload ảnh).
+async function apiCore(action, payload = {}) {
+  const res = await fetch(API_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, payload })
+  });
+  const text = await res.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (parseErr) {
+    throw new Error(`API trả về dữ liệu không phải JSON. HTTP ${res.status}. ${text.slice(0, 500)}`);
+  }
+  if (!res.ok) {
+    throw new Error(data.error || data.errorMessage || `API HTTP error ${res.status}`);
+  }
+  if (!data.ok) throw new Error(data.error || data.errorMessage || JSON.stringify(data).slice(0, 500) || 'API error');
+  return data.result;
 }
 
 function showLoader(text) {
@@ -678,19 +684,59 @@ function makeStamp(){
   ];
 }
 
+// Tìm 1 mục ảnh trong một bộ dữ liệu hồ sơ (state.current hoặc kết quả API trả về).
+function findPhotoItemIn(data, target){
+  if (!data || !target) return null;
+  if (target.targetType === 'daily') {
+    const sess = (data.dailySessions || []).find(s => s.ID === target.dailyQcId);
+    return sess ? (sess.items || []).find(it => it.ITEM_CODE === target.itemCode) : null;
+  }
+  if (target.targetType === 'container') {
+    return (data.containerItems || []).find(it => Number(it.PHOTO_NO) === Number(target.photoNo));
+  }
+  return null;
+}
+
 async function usePhoto(){
   if(!capturedDataUrl || !cameraTarget) return;
-  try{
-    const f = state.current.qcFile;
-    const capturedAt = formatDateTime(new Date());
-    const safeTitle = cameraTarget.title.replace(/[^a-zA-Z0-9À-ỹ]+/g,'-').slice(0,60);
-    const fileName = `${f.LOT_CODE}_${safeTitle}_${Date.now()}.jpg`;
-    const payload = { qcFileId: f.ID, dataUrl: capturedDataUrl, capturedAt, fileName, ...cameraTarget };
-    closeCamera();
-    state.current = await api('uploadPhoto', payload);
-    setMsg('Đã lưu ảnh vào đúng mục.');
-    renderDetail();
-  }catch(err){ closeCamera(); setErr(err); renderDetail(); }
+  const f = state.current.qcFile;
+  const target = cameraTarget;            // giữ tham chiếu cục bộ (camera sắp đóng)
+  const dataUrl = capturedDataUrl;
+  const capturedAt = formatDateTime(new Date());
+  const safeTitle = target.title.replace(/[^a-zA-Z0-9À-ỹ]+/g,'-').slice(0,60);
+  const fileName = `${f.LOT_CODE}_${safeTitle}_${Date.now()}.jpg`;
+  const payload = { qcFileId: f.ID, dataUrl, capturedAt, fileName, ...target };
+
+  // 1) HIỆN ẢNH NGAY (lạc quan) + đóng camera. Không bắt người dùng chờ mạng.
+  const item = findPhotoItemIn(state.current, target);
+  const prevUrl = item ? (item.PHOTO_URL || '') : '';
+  const prevCaptured = item ? (item.CAPTURED_AT || '') : '';
+  if (item){ item.PHOTO_URL = dataUrl; item.CAPTURED_AT = capturedAt; }
+  closeCamera();
+  renderDetail();
+
+  // 2) UPLOAD NGẦM (không loader). Xong thì thay bằng link thật; lỗi thì hoàn lại + báo.
+  try {
+    const updated = await apiCore('uploadPhoto', payload);
+    if (state.current && state.current.qcFile.ID === f.ID){
+      const real = findPhotoItemIn(updated, target);
+      const cur = findPhotoItemIn(state.current, target);
+      if (real && cur){
+        cur.PHOTO_URL = real.PHOTO_URL;
+        cur.PHOTO_PATH = real.PHOTO_PATH;
+        cur.CAPTURED_AT = real.CAPTURED_AT;
+        renderDetail();
+      }
+    }
+    showToast('Đã lưu ảnh ✓', 'success');
+  } catch (err) {
+    // Upload lỗi: hoàn lại ảnh cũ (nếu còn ở đúng hồ sơ) và báo để chụp lại.
+    if (state.current && state.current.qcFile.ID === f.ID){
+      const cur = findPhotoItemIn(state.current, target);
+      if (cur){ cur.PHOTO_URL = prevUrl; cur.CAPTURED_AT = prevCaptured; renderDetail(); }
+    }
+    showToast('Ảnh CHƯA lưu được. Hãy chụp lại.', 'error');
+  }
 }
 
 function savedPhotoHtml(it){
