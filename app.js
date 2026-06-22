@@ -132,7 +132,10 @@ function renderList(){
           <h2>Hồ sơ QC</h2>
           <div class="muted">Tạo hồ sơ, nhập thông tin, chụp ảnh trực tiếp và xuất PDF theo mẫu song ngữ.</div>
         </div>
-        <button class="primary" onclick="renderCreate()">+ Tạo hồ sơ mới</button>
+        <div class="row">
+          <button class="primary" onclick="renderCreate('IMPORT')">+ QC hàng nhập</button>
+          <button class="primary" onclick="renderCreate('EXPORT')">+ QC hàng xuất</button>
+        </div>
       </div>
     </div>
     <div class="stack">
@@ -144,7 +147,10 @@ function fileCard(f){
   return `<div class="file-item" onclick="openFile('${f.ID}')">
     <div class="between">
       <b>${escapeHtml(f.LOT_CODE || f.QC_FILE_NO || '')}</b>
-      <span class="pill">${escapeHtml(f.STATUS || 'DRAFT')}</span>
+      <span class="row" style="gap:6px;flex-wrap:nowrap">
+        <span class="pill">${qcTypeLabel(f.QC_TYPE)}</span>
+        <span class="pill">${escapeHtml(f.STATUS || 'DRAFT')}</span>
+      </span>
     </div>
     <div>${escapeHtml(f.PRODUCT_NAME || 'Chưa nhập sản phẩm')}</div>
     <div class="muted">PO: ${escapeHtml(f.PO_NO || '-')} | NCC: ${escapeHtml(f.SUPPLIER || '-')} | Ngày tạo: ${escapeHtml(f.CREATED_AT || '')}</div>
@@ -155,14 +161,19 @@ function fileCard(f){
   </div>`;
 }
 
-function renderCreate(){
+let createType = 'IMPORT';
+function qcTypeLabel(t){ return t === 'EXPORT' ? 'Hàng xuất' : 'Hàng nhập'; }
+
+function renderCreate(qcType){
+  createType = (qcType === 'EXPORT') ? 'EXPORT' : 'IMPORT';
+  const label = qcTypeLabel(createType);
   app.innerHTML = `${flash()}
     <div class="card">
-      <div class="between"><h2>Tạo hồ sơ QC mới</h2><button class="ghost" onclick="renderList()">Quay lại</button></div>
-      <div class="note">Mã hồ sơ QC và mã lô sẽ tự tạo theo PO và ngày tạo. Ví dụ: QC-PO123-20260619.</div>
+      <div class="between"><h2>Tạo hồ sơ ${label}</h2><button class="ghost" onclick="renderList()">Quay lại</button></div>
+      <div class="note">Loại: <b>${label}</b>. Mã hồ sơ QC và mã lô sẽ tự tạo theo PO và ngày tạo.</div>
       <form id="createForm" class="stack" onsubmit="createQCFile(event)">
         ${infoFieldsHtml({})}
-        <button class="primary full" type="submit">Tạo hồ sơ</button>
+        <button class="primary full" type="submit">Tạo hồ sơ ${label}</button>
       </form>
     </div>`;
 }
@@ -199,6 +210,7 @@ async function createQCFile(e){
   e.preventDefault();
   try{
     const p = getFormData(e.target);
+    p.qcType = createType;
     state.current = await api('createQCFile', p);
     setMsg('Đã tạo hồ sơ QC.');
     renderDetail();
@@ -254,6 +266,7 @@ function renderDetail(){
         <button class="ghost" onclick="loadFiles()">Danh sách</button>
       </div>
       <div class="row" style="margin-top:10px">
+        <span class="pill">${qcTypeLabel(f.QC_TYPE)}</span>
         <span class="pill">${escapeHtml(f.STATUS)}</span>
         <span class="pill">Ngày SX: ${escapeHtml(f.TOTAL_PRODUCTION_DAYS || '0')}</span>
         <span class="pill">Kho/cơ sở: ${escapeHtml(f.TOTAL_WAREHOUSES || '0')}</span>
