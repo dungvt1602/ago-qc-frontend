@@ -303,12 +303,12 @@ function renderStepMenu(){
     ['info','A. Thông tin lô hàng','Lot information'],
     ['summary','B. Thống kê','Summary'],
     ['container','C. Hình ảnh container','Container photos'],
-    ['daily','D. QC hàng ngày','Daily QC'],
+    ['daily','D. QC chất lượng','Quality check'],
     ['export','E. Xuất PDF','Export PDF']
   ] : [
     ['info','A. Thông tin lô hàng','Lot information'],
     ['summary','B. Thống kê','Summary'],
-    ['daily','C. QC hàng ngày','Daily QC'],
+    ['daily','C. QC chất lượng','Quality check'],
     ['container','D. Hình ảnh container','Container photos'],
     ['export','E. Xuất PDF','Export PDF']
   ];
@@ -421,14 +421,12 @@ async function addDailyQC(e){
 function renderDailySection(d){
   if (state.activeDailyId) return renderDailySessionDetail(d);
   return `<div class="card">
-    <div class="between"><h3>QC hàng ngày / Daily QC</h3><button class="ghost small-btn" onclick="backToMenu()">Về đầu mục</button></div>
-    <form class="grid3" onsubmit="addDailyQC(event)">
+    <div class="between"><h3>QC chất lượng / Quality check</h3><button class="ghost small-btn" onclick="backToMenu()">Về đầu mục</button></div>
+    <form class="row" style="align-items:flex-end" onsubmit="addDailyQC(event)">
       ${input('qcDate','Ngày QC / QC date', today(), true, 'date')}
-      ${input('warehouse','Kho/Cơ sở / Warehouse/Facility', '', true)}
-      ${input('qcStaff','Nhân viên QC / QC staff', d.qcFile.QC_STAFF || '', true)}
-      <button class="primary" type="submit">+ Thêm ngày/kho QC</button>
+      <button class="primary" type="submit">+ Thêm đợt QC</button>
     </form>
-    <div class="section-title">Danh sách ngày/kho QC</div>
+    <div class="section-title">Danh sách đợt QC</div>
     <div class="stack">
       ${d.dailySessions.length ? d.dailySessions.map(renderDailySessionCard).join('') : '<div class="note">Chưa có ngày QC.</div>'}
     </div>
@@ -439,8 +437,8 @@ function renderDailySessionCard(sess){
   const photos = (sess.items || []).filter(x => x.PHOTO_FILE_ID || x.PHOTO_URL).length;
   const filled = (sess.items || []).filter(x => x.PASS_RATE || x.FAIL_RATE || x.REMARKS).length;
   return `<div class="file-item" onclick="openDailySessionView('${sess.ID}')">
-    <div class="between"><b>${escapeHtml(sess.QC_DATE)} - ${escapeHtml(sess.WAREHOUSE)}</b><span class="pill">${photos}/6 ảnh</span></div>
-    <div class="muted">QC: ${escapeHtml(sess.QC_STAFF || '')} | Đã nhập: ${filled}/6 hạng mục</div>
+    <div class="between"><b>QC ${escapeHtml(sess.QC_DATE)}</b><span class="pill">${photos}/6 ảnh</span></div>
+    <div class="muted">Đã nhập: ${filled}/6 hạng mục</div>
   </div>`;
 }
 
@@ -449,12 +447,10 @@ function renderDailySessionDetail(d){
   if (!sess) { state.activeDailyId = null; return renderDailySection(d); }
   if (state.activeDailyItemCode) return renderDailyItemDetail(sess);
   return `<div class="card">
-    <div class="between"><h3>${escapeHtml(sess.QC_DATE)} - ${escapeHtml(sess.WAREHOUSE)}</h3><button class="ghost small-btn" onclick="state.activeDailyId=null;renderDetail()">Quay lại danh sách ngày</button></div>
-    <div class="note">Chọn từng hạng mục để mở màn hình nhập riêng. Có thể sửa ngày/kho/nhân viên của phiên ngay bên dưới.</div>
-    <form id="editDailyForm" class="grid3" style="margin:8px 0">
+    <div class="between"><h3>QC ${escapeHtml(sess.QC_DATE)}</h3><button class="ghost small-btn" onclick="state.activeDailyId=null;renderDetail()">Quay lại danh sách</button></div>
+    <div class="note">Chọn từng hạng mục để mở màn hình nhập riêng. Có thể sửa ngày của đợt QC ngay bên dưới.</div>
+    <form id="editDailyForm" class="grid2" style="margin:8px 0">
       ${input('qcDate','Ngày QC / QC date', sess.QC_DATE, false, 'date')}
-      ${input('warehouse','Kho/Cơ sở / Warehouse', sess.WAREHOUSE)}
-      ${input('qcStaff','Nhân viên QC / QC staff', sess.QC_STAFF)}
     </form>
     <div class="row" style="margin-bottom:8px">
       <button class="ghost small-btn" onclick="saveSession('${sess.ID}')">Lưu sửa phiên</button>
@@ -481,7 +477,7 @@ function renderDailyItemDetail(sess){
   const hasPhoto = Boolean(it.PHOTO_URL || it.PHOTO_FILE_ID);
   return `<div class="card">
     <div class="between"><h3>${escapeHtml(it.ITEM_NAME_VI)}</h3><button class="ghost small-btn" onclick="state.activeDailyItemCode=null;renderDetail()">Quay lại hạng mục</button></div>
-    <div class="muted">${escapeHtml(it.ITEM_NAME_EN)} | ${escapeHtml(sess.QC_DATE)} - ${escapeHtml(sess.WAREHOUSE)}</div>
+    <div class="muted">${escapeHtml(it.ITEM_NAME_EN)} | QC ${escapeHtml(sess.QC_DATE)}</div>
     <div class="qc-body single-form">
       ${savedPhotoHtml(it)}
       <div class="row">
@@ -595,7 +591,7 @@ async function exportPDF(variant){
 function openCameraDaily(dailyQcId,itemCode){
   const sess = state.current.dailySessions.find(x => x.ID === dailyQcId);
   const item = sess.items.find(x => x.ITEM_CODE === itemCode);
-  cameraTarget = { targetType:'daily', dailyQcId, itemCode, title: item.ITEM_NAME_VI, subtitle: `${sess.QC_DATE} - ${sess.WAREHOUSE}` };
+  cameraTarget = { targetType:'daily', dailyQcId, itemCode, title: item.ITEM_NAME_VI, subtitle: `QC ${sess.QC_DATE}` };
   startCapture();
 }
 function openCameraContainer(photoNo){
