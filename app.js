@@ -389,15 +389,9 @@ function renderSummarySection(d){
   return `<div class="card">
     <div class="between"><h3>B. Thống kê / Summary</h3><button class="ghost small-btn" onclick="saveSummary()">Lưu thống kê</button></div>
     <form id="summaryForm" class="grid2">
-      ${input('producedQty','Số lượng đã sản xuất / Produced qty', s.PRODUCED_QTY)}
-      ${input('pendingProductionQty','Số lượng chờ sản xuất / Pending production qty', s.PENDING_PRODUCTION_QTY)}
-      ${input('totalPassedFinishedGoods','Tổng thành phẩm đạt / Total passed finished goods', s.TOTAL_PASSED_FINISHED_GOODS)}
-      ${input('cumulativePassRate','Tỷ lệ đạt lũy kế / Cumulative pass rate', s.CUMULATIVE_PASS_RATE)}
-      ${input('totalFailedPending','Tổng không đạt/chờ xử lý / Total failed/pending', s.TOTAL_FAILED_PENDING)}
-      ${input('cumulativeFailRate','Tỷ lệ không đạt lũy kế / Cumulative fail rate', s.CUMULATIVE_FAIL_RATE)}
-      ${input('totalDelivered','Tổng đã giao / Total delivered', s.TOTAL_DELIVERED)}
-      ${input('totalStockOnHand','Tổng tồn kho / Total stock on hand', s.TOTAL_STOCK_ON_HAND)}
-      ${input('differenceToResolve','Chênh lệch cần xử lý / Difference to resolve', s.DIFFERENCE_TO_RESOLVE)}
+      ${input('cumulativePassRate','Tỷ lệ đạt / Pass rate', s.CUMULATIVE_PASS_RATE)}
+      ${input('cumulativeFailRate','Tỷ lệ không đạt / Fail rate', s.CUMULATIVE_FAIL_RATE)}
+      <div class="field"><label>Lý do không đạt / Reason for failure</label><textarea name="failReason">${escapeHtml(s.FAIL_REASON || '')}</textarea></div>
       <div class="field"><label>Hướng xử lý / Handling action</label><textarea name="handlingAction">${escapeHtml(s.HANDLING_ACTION || '')}</textarea></div>
     </form>
   </div>`;
