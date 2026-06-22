@@ -434,6 +434,13 @@ function renderDailySection(d){
 }
 
 function renderDailySessionCard(sess){
+  if (Array.isArray(sess.samples)) { // hàng nhập: hiển thị theo số mẫu
+    const nPhotos = sess.samples.reduce((a, s) => a + ((s.PHOTOS || []).filter(p => p && p.url).length), 0);
+    return `<div class="file-item" onclick="openDailySessionView('${sess.ID}')">
+      <div class="between"><b>QC ${escapeHtml(sess.QC_DATE)}</b><span class="pill">${sess.samples.length} mẫu</span></div>
+      <div class="muted">${nPhotos} ảnh đã chụp</div>
+    </div>`;
+  }
   const photos = (sess.items || []).filter(x => x.PHOTO_FILE_ID || x.PHOTO_URL).length;
   const filled = (sess.items || []).filter(x => x.PASS_RATE || x.FAIL_RATE || x.REMARKS).length;
   return `<div class="file-item" onclick="openDailySessionView('${sess.ID}')">
@@ -446,9 +453,14 @@ function renderDailySessionDetail(d){
   const sess = d.dailySessions.find(x => x.ID === state.activeDailyId);
   if (!sess) { state.activeDailyId = null; return renderDailySection(d); }
   if (state.activeDailyItemCode) return renderDailyItemDetail(sess);
+  const isImport = d.qcFile.QC_TYPE === 'IMPORT';
+  const body = isImport
+    ? `<div class="row" style="margin-bottom:8px"><button class="primary small-btn" onclick="addSample('${sess.ID}')">+ Thêm mẫu</button></div>
+       <div class="stack">${(sess.samples || []).length ? sess.samples.map(renderSampleCard).join('') : '<div class="note">Chưa có mẫu nào. Bấm "+ Thêm mẫu" để bắt đầu.</div>'}</div>`
+    : `<div class="stack">${(sess.items || []).map(it => renderDailyItemCard(sess, it)).join('')}</div>`;
   return `<div class="card">
     <div class="between"><h3>QC ${escapeHtml(sess.QC_DATE)}</h3><button class="ghost small-btn" onclick="state.activeDailyId=null;renderDetail()">Quay lại danh sách</button></div>
-    <div class="note">Chọn từng hạng mục để mở màn hình nhập riêng. Có thể sửa ngày của đợt QC ngay bên dưới.</div>
+    <div class="note">${isImport ? 'Thêm mẫu để kiểm tra; mỗi mẫu chụp 4 ảnh. Có thể sửa ngày của đợt QC bên dưới.' : 'Chọn từng hạng mục để mở màn hình nhập riêng. Có thể sửa ngày của đợt QC ngay bên dưới.'}</div>
     <form id="editDailyForm" class="grid2" style="margin:8px 0">
       ${input('qcDate','Ngày QC / QC date', sess.QC_DATE, false, 'date')}
     </form>
@@ -456,10 +468,67 @@ function renderDailySessionDetail(d){
       <button class="ghost small-btn" onclick="saveSession('${sess.ID}')">Lưu sửa phiên</button>
       <button class="ghost danger small-btn" onclick="deleteSession('${sess.ID}')">🗑 Xóa phiên này</button>
     </div>
-    <div class="stack">
-      ${(sess.items || []).map(it => renderDailyItemCard(sess, it)).join('')}
-    </div>
+    ${body}
   </div>`;
+}
+
+// ===== Hàng nhập: mẫu QC (mỗi mẫu 4 ảnh) =====
+function renderSampleCard(sm){
+  const photos = Array.isArray(sm.PHOTOS) ? sm.PHOTOS : [];
+  let slots = '';
+  for (let i = 0; i < 4; i++){
+    const p = photos[i];
+    const has = p && p.url;
+    slots += `<div class="field" style="border:1px solid var(--line);border-radius:10px;padding:8px;background:#fff">
+        <label>Ảnh ${i + 1}</label>
+        ${has
+          ? `<a href="${escapeAttr(p.url)}" target="_blank"><img src="${escapeAttr(p.url)}" alt="Ảnh ${i + 1}" style="width:100%;height:120px;object-fit:cover;border-radius:8px;border:1px solid var(--line)"></a>`
+          : `<div class="empty-photo" style="height:120px">Chưa có ảnh</div>`}
+        <div class="row" style="margin-top:6px">
+          <button class="primary small-btn" onclick="openCameraSample('${sm.ID}',${i + 1},${sm.SAMPLE_NO})">📷 ${has ? 'Chụp lại' : 'Chụp'}</button>
+          ${has ? `<button class="ghost danger small-btn" onclick="deletePhotoSample('${sm.ID}',${i + 1})">🗑</button>` : ''}
+        </div>
+      </div>`;
+  }
+  const count = photos.filter(p => p && p.url).length;
+  return `<div class="qc-item">
+    <div class="qc-title" style="display:flex;justify-content:space-between;align-items:center;min-height:auto">
+      <span>Mẫu ${sm.SAMPLE_NO} <span class="muted">(${count}/4 ảnh)</span></span>
+      <button class="ghost danger small-btn" onclick="deleteSample('${sm.ID}')">🗑 Xóa mẫu</button>
+    </div>
+    <div class="qc-body grid2">${slots}</div>
+  </div>`;
+}
+
+async function addSample(dailyQcId){
+  try{
+    state.current = await api('addSample', { dailyQcId });
+    setMsg('Đã thêm mẫu.');
+    renderDetail();
+  }catch(err){ setErr(err); renderDetail(); }
+}
+
+async function deleteSample(sampleId){
+  if (!confirm('Xóa mẫu này (kèm các ảnh)?')) return;
+  try{
+    state.current = await api('deleteSample', { sampleId });
+    setMsg('Đã xóa mẫu.');
+    renderDetail();
+  }catch(err){ setErr(err); renderDetail(); }
+}
+
+function openCameraSample(sampleId, slot, sampleNo){
+  cameraTarget = { targetType:'sample', sampleId, slot, title:`Mẫu ${sampleNo} - Ảnh ${slot}`, subtitle:'' };
+  startCapture();
+}
+
+async function deletePhotoSample(sampleId, slot){
+  if (!confirm('Xóa ảnh này?')) return;
+  try{
+    state.current = await api('deletePhoto', { targetType:'sample', sampleId, slot, qcFileId: state.current.qcFile.ID });
+    setMsg('Đã xóa ảnh.');
+    renderDetail();
+  }catch(err){ setErr(err); renderDetail(); }
 }
 
 function renderDailyItemCard(sess,it){
@@ -711,7 +780,7 @@ function makeStamp(){
   ];
 }
 
-// Tìm 1 mục ảnh trong một bộ dữ liệu hồ sơ (state.current hoặc kết quả API trả về).
+// Tìm 1 mục ảnh (daily/container) trong một bộ dữ liệu hồ sơ.
 function findPhotoItemIn(data, target){
   if (!data || !target) return null;
   if (target.targetType === 'daily') {
@@ -724,44 +793,68 @@ function findPhotoItemIn(data, target){
   return null;
 }
 
+// Tìm 1 mẫu (hàng nhập) trong một bộ dữ liệu hồ sơ.
+function findSampleIn(data, target){
+  if (!data || !target || target.targetType !== 'sample') return null;
+  for (const sess of (data.dailySessions || [])) {
+    const sm = (sess.samples || []).find(x => x.ID === target.sampleId);
+    if (sm) return sm;
+  }
+  return null;
+}
+
+// Gắn ảnh vào state cục bộ (lạc quan). Trả về hàm hoàn tác nếu upload lỗi.
+function applyLocalPhoto(target, dataUrl, capturedAt){
+  if (target.targetType === 'sample') {
+    const sm = findSampleIn(state.current, target);
+    if (!sm) return () => {};
+    if (!Array.isArray(sm.PHOTOS)) sm.PHOTOS = [];
+    while (sm.PHOTOS.length < 4) sm.PHOTOS.push(null);
+    const slot = Math.max(1, Math.min(4, Number(target.slot) || 1)) - 1;
+    const prev = sm.PHOTOS[slot];
+    sm.PHOTOS[slot] = { url: dataUrl, captured_at: capturedAt };
+    return () => { sm.PHOTOS[slot] = prev; };
+  }
+  const it = findPhotoItemIn(state.current, target);
+  if (!it) return () => {};
+  const prevUrl = it.PHOTO_URL || '', prevCap = it.CAPTURED_AT || '';
+  it.PHOTO_URL = dataUrl; it.CAPTURED_AT = capturedAt;
+  return () => { it.PHOTO_URL = prevUrl; it.CAPTURED_AT = prevCap; };
+}
+
+// Sau khi upload xong, lấy dữ liệu thật từ kết quả trả về gắn vào state cục bộ.
+function mergePhotoResult(target, updated){
+  if (target.targetType === 'sample') {
+    const real = findSampleIn(updated, target), cur = findSampleIn(state.current, target);
+    if (real && cur) cur.PHOTOS = real.PHOTOS;
+    return;
+  }
+  const real = findPhotoItemIn(updated, target), cur = findPhotoItemIn(state.current, target);
+  if (real && cur){ cur.PHOTO_URL = real.PHOTO_URL; cur.PHOTO_PATH = real.PHOTO_PATH; cur.CAPTURED_AT = real.CAPTURED_AT; }
+}
+
 async function usePhoto(){
   if(!capturedDataUrl || !cameraTarget) return;
   const f = state.current.qcFile;
   const target = cameraTarget;            // giữ tham chiếu cục bộ (camera sắp đóng)
   const dataUrl = capturedDataUrl;
   const capturedAt = formatDateTime(new Date());
-  const safeTitle = target.title.replace(/[^a-zA-Z0-9À-ỹ]+/g,'-').slice(0,60);
+  const safeTitle = (target.title || 'photo').replace(/[^a-zA-Z0-9À-ỹ]+/g,'-').slice(0,60);
   const fileName = `${f.LOT_CODE}_${safeTitle}_${Date.now()}.jpg`;
   const payload = { qcFileId: f.ID, dataUrl, capturedAt, fileName, ...target };
 
-  // 1) HIỆN ẢNH NGAY (lạc quan) + đóng camera. Không bắt người dùng chờ mạng.
-  const item = findPhotoItemIn(state.current, target);
-  const prevUrl = item ? (item.PHOTO_URL || '') : '';
-  const prevCaptured = item ? (item.CAPTURED_AT || '') : '';
-  if (item){ item.PHOTO_URL = dataUrl; item.CAPTURED_AT = capturedAt; }
+  // 1) Hiện ảnh ngay (lạc quan) + đóng camera. Không bắt người dùng chờ mạng.
+  const revert = applyLocalPhoto(target, dataUrl, capturedAt);
   closeCamera();
   renderDetail();
 
-  // 2) UPLOAD NGẦM (không loader). Xong thì thay bằng link thật; lỗi thì hoàn lại + báo.
+  // 2) Upload ngầm. Xong gắn link thật; lỗi thì hoàn lại + báo.
   try {
     const updated = await apiCore('uploadPhoto', payload);
-    if (state.current && state.current.qcFile.ID === f.ID){
-      const real = findPhotoItemIn(updated, target);
-      const cur = findPhotoItemIn(state.current, target);
-      if (real && cur){
-        cur.PHOTO_URL = real.PHOTO_URL;
-        cur.PHOTO_PATH = real.PHOTO_PATH;
-        cur.CAPTURED_AT = real.CAPTURED_AT;
-        renderDetail();
-      }
-    }
+    if (state.current && state.current.qcFile.ID === f.ID){ mergePhotoResult(target, updated); renderDetail(); }
     showToast('Đã lưu ảnh ✓', 'success');
   } catch (err) {
-    // Upload lỗi: hoàn lại ảnh cũ (nếu còn ở đúng hồ sơ) và báo để chụp lại.
-    if (state.current && state.current.qcFile.ID === f.ID){
-      const cur = findPhotoItemIn(state.current, target);
-      if (cur){ cur.PHOTO_URL = prevUrl; cur.CAPTURED_AT = prevCaptured; renderDetail(); }
-    }
+    if (state.current && state.current.qcFile.ID === f.ID){ revert(); renderDetail(); }
     showToast('Ảnh CHƯA lưu được. Hãy chụp lại.', 'error');
   }
 }
@@ -855,6 +948,10 @@ window.saveSession = saveSession;
 window.deleteSession = deleteSession;
 window.deletePhotoDaily = deletePhotoDaily;
 window.deletePhotoContainer = deletePhotoContainer;
+window.addSample = addSample;
+window.deleteSample = deleteSample;
+window.openCameraSample = openCameraSample;
+window.deletePhotoSample = deletePhotoSample;
 
 // Đăng ký service worker để app cài được như app (PWA).
 if ('serviceWorker' in navigator) {
