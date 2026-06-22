@@ -172,13 +172,32 @@ function renderCreate(qcType){
       <div class="between"><h2>Tạo hồ sơ ${label}</h2><button class="ghost" onclick="renderList()">Quay lại</button></div>
       <div class="note">Loại: <b>${label}</b>. Mã hồ sơ QC và mã lô sẽ tự tạo theo PO và ngày tạo.</div>
       <form id="createForm" class="stack" onsubmit="createQCFile(event)">
-        ${infoFieldsHtml({})}
+        ${infoFieldsHtml({}, createType)}
         <button class="primary full" type="submit">Tạo hồ sơ ${label}</button>
       </form>
     </div>`;
 }
 
-function infoFieldsHtml(f = {}){
+function infoFieldsHtml(f = {}, qcType){
+  const type = qcType || f.QC_TYPE || 'IMPORT';
+  if (type === 'IMPORT') {
+    // Hàng nhập (nhập khẩu): bỏ trường sản xuất, đổi nhãn cho phù hợp.
+    return `<div class="grid2">
+      ${input('contractNo','Hợp đồng / Invoice', f.CONTRACT_NO)}
+      ${input('poNo','Số PO / Tham chiếu', f.PO_NO, true)}
+      ${input('supplier','Nhà cung cấp / Người xuất khẩu', f.SUPPLIER)}
+      ${input('supplierCode','Mã NCC / Supplier code', f.SUPPLIER_CODE)}
+      ${input('productName','Tên hàng / Product name', f.PRODUCT_NAME, true)}
+      ${input('specification','Quy cách/Size/Grade', f.SPECIFICATION)}
+      ${input('poQuantity','Số lượng', f.PO_QUANTITY)}
+      ${input('unit','Đơn vị tính / Unit', f.UNIT)}
+      ${input('containerNo','Số container / Container no.', f.CONTAINER_NO)}
+      ${input('sealNo','Số seal / Seal no.', f.SEAL_NO)}
+      ${input('containerLoadingDate','Ngày hàng về / Arrival date', f.CONTAINER_LOADING_DATE, false, 'date')}
+      ${input('qcStaff','Nhân viên QC / QC staff', f.QC_STAFF, true)}
+    </div>`;
+  }
+  // Hàng xuất: form đầy đủ như cũ.
   return `<div class="grid2">
     ${input('contractNo','Hợp đồng số / Contract no.', f.CONTRACT_NO)}
     ${input('poNo','PO số / PO no.', f.PO_NO, true)}
@@ -278,7 +297,15 @@ function renderDetail(){
 }
 
 function renderStepMenu(){
-  const items = [
+  const isImport = state.current && state.current.qcFile && state.current.qcFile.QC_TYPE === 'IMPORT';
+  // Hàng nhập: đưa mục "Hình ảnh container" lên trước "QC hàng ngày".
+  const items = isImport ? [
+    ['info','A. Thông tin lô hàng','Lot information'],
+    ['summary','B. Thống kê','Summary'],
+    ['container','C. Hình ảnh container','Container photos'],
+    ['daily','D. QC hàng ngày','Daily QC'],
+    ['export','E. Xuất PDF','Export PDF']
+  ] : [
     ['info','A. Thông tin lô hàng','Lot information'],
     ['summary','B. Thống kê','Summary'],
     ['daily','C. QC hàng ngày','Daily QC'],
