@@ -352,10 +352,15 @@ function renderExportSection(d){
   const f = d.qcFile;
   return `<div class="card">
     <h3>Xuất file PDF</h3>
-    <div class="note">Bấm xuất, chờ vài giây. Lần đầu trong ngày có thể lâu hơn vì server vừa thức dậy. Tạo xong, link PDF hiện ngay bên dưới.</div>
+    <div class="note">Bấm xuất, chờ vài giây. Lần đầu trong ngày có thể lâu hơn vì server vừa thức dậy. Tạo xong, link PDF hiện ngay bên dưới.<br>
+      <b>Bản song ngữ</b>: nhãn ghi cả tiếng Việt và tiếng Anh. <b>Bản tiếng Anh</b>: nhãn chỉ tiếng Anh — riêng phần QC gõ tay (nhận xét, lý do...) vẫn giữ nguyên như bạn đã nhập.</div>
     <div class="actions" style="margin-top:10px">
-      <button class="primary" onclick="exportPDF('internal')">📄 Xuất PDF</button>
+      <button class="primary" onclick="exportPDF('internal')">📄 Xuất PDF (song ngữ)</button>
       ${f.PDF_URL ? `<a class="ghost" href="${f.PDF_URL}" target="_blank">Mở PDF hiện tại</a>` : ''}
+    </div>
+    <div class="actions" style="margin-top:8px">
+      <button class="primary" onclick="exportPDF('en')">📄 Xuất PDF tiếng Anh</button>
+      ${f.PDF_URL_EN ? `<a class="ghost" href="${f.PDF_URL_EN}" target="_blank">Mở bản tiếng Anh</a>` : ''}
     </div>
   </div>`;
 }
@@ -645,12 +650,12 @@ async function exportPDF(variant){
     renderDetail();
     return;
   }
-  const isCustomer = variant === 'customer';
+  const isEn = variant === 'en';
   try{
-    // Gọi thẳng backend, kèm loại bản (nội bộ / khách hàng). Trả về hồ sơ đã cập nhật link PDF.
+    // Gọi thẳng backend, kèm ngôn ngữ bản in. Trả về hồ sơ đã cập nhật link PDF.
     state.current = await api('exportPDF', { qcFileId: state.current.qcFile.ID, variant });
-    const url = isCustomer ? state.current.qcFile.PDF_URL_CUSTOMER : state.current.qcFile.PDF_URL;
-    setMsg(isCustomer ? 'Đã tạo PDF khách hàng. Bấm "Mở bản khách hàng" để xem/tải.' : 'Đã tạo PDF. Bấm "Mở PDF hiện tại" để xem/tải.');
+    const url = isEn ? state.current.qcFile.PDF_URL_EN : state.current.qcFile.PDF_URL;
+    setMsg(isEn ? 'Đã tạo PDF tiếng Anh. Bấm "Mở bản tiếng Anh" để xem/tải.' : 'Đã tạo PDF. Bấm "Mở PDF hiện tại" để xem/tải.');
     renderDetail();
     // Thử mở tab mới; nếu bị chặn popup thì link bên dưới vẫn dùng được.
     if (url) window.open(url, '_blank');
