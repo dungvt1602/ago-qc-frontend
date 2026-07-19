@@ -191,6 +191,7 @@ function infoFieldsHtml(f = {}, qcType){
       ${input('specification','Quy cách/Size/Grade', f.SPECIFICATION)}
       ${input('poQuantity','Số lượng', f.PO_QUANTITY)}
       ${input('unit','Đơn vị tính / Unit', f.UNIT)}
+      ${input('customer','Khách hàng / Customer', f.CUSTOMER)}
       ${input('containerNo','Số container / Container no.', f.CONTAINER_NO)}
       ${input('sealNo','Số seal / Seal no.', f.SEAL_NO)}
       ${input('containerLoadingDate','Ngày hàng về / Arrival date', f.CONTAINER_LOADING_DATE, false, 'date')}
@@ -211,6 +212,7 @@ function infoFieldsHtml(f = {}, qcType){
     ${input('unit','Đơn vị tính / Unit', f.UNIT)}
     ${input('estFinishDate','Dự kiến kết thúc / Est. finish date', f.EST_FINISH_DATE, false, 'date')}
     ${input('qcStaff','Nhân viên QC / QC staff', f.QC_STAFF, true)}
+    ${input('customer','Khách hàng / Customer', f.CUSTOMER)}
     ${input('containerNo','Số container / Container no.', f.CONTAINER_NO)}
     ${input('sealNo','Số seal / Seal no.', f.SEAL_NO)}
     ${input('containerLoadingDate','Ngày đóng cont / Container loading date', f.CONTAINER_LOADING_DATE, false, 'date')}
@@ -353,14 +355,15 @@ function renderExportSection(d){
   return `<div class="card">
     <h3>Xuất file PDF</h3>
     <div class="note">Bấm xuất, chờ vài giây. Lần đầu trong ngày có thể lâu hơn vì server vừa thức dậy. Tạo xong, link PDF hiện ngay bên dưới.<br>
-      <b>Bản song ngữ</b>: nhãn ghi cả tiếng Việt và tiếng Anh. <b>Bản tiếng Anh</b>: nhãn chỉ tiếng Anh — riêng phần QC gõ tay (nhận xét, lý do...) vẫn giữ nguyên như bạn đã nhập.</div>
+      <b>Bản nội bộ</b>: song ngữ, có đầy đủ tỉ lệ đạt / không đạt / lý do / hướng xử lý.<br>
+      <b>Bản khách hàng</b>: tiếng Anh, có dòng Khách hàng, <b>ẩn toàn bộ tỉ lệ và nhận xét</b> — chỉ thông tin lô và hình ảnh.</div>
     <div class="actions" style="margin-top:10px">
-      <button class="primary" onclick="exportPDF('internal')">📄 Xuất PDF (song ngữ)</button>
-      ${f.PDF_URL ? `<a class="ghost" href="${f.PDF_URL}" target="_blank">Mở PDF hiện tại</a>` : ''}
+      <button class="primary" onclick="exportPDF('internal')">📄 Xuất PDF nội bộ</button>
+      ${f.PDF_URL ? `<a class="ghost" href="${f.PDF_URL}" target="_blank">Mở bản nội bộ</a>` : ''}
     </div>
     <div class="actions" style="margin-top:8px">
-      <button class="primary" onclick="exportPDF('en')">📄 Xuất PDF tiếng Anh</button>
-      ${f.PDF_URL_EN ? `<a class="ghost" href="${f.PDF_URL_EN}" target="_blank">Mở bản tiếng Anh</a>` : ''}
+      <button class="primary" onclick="exportPDF('en')">📄 Xuất PDF khách hàng (EN)</button>
+      ${f.PDF_URL_EN ? `<a class="ghost" href="${f.PDF_URL_EN}" target="_blank">Mở bản khách hàng</a>` : ''}
     </div>
   </div>`;
 }
@@ -655,7 +658,7 @@ async function exportPDF(variant){
     // Gọi thẳng backend, kèm ngôn ngữ bản in. Trả về hồ sơ đã cập nhật link PDF.
     state.current = await api('exportPDF', { qcFileId: state.current.qcFile.ID, variant });
     const url = isEn ? state.current.qcFile.PDF_URL_EN : state.current.qcFile.PDF_URL;
-    setMsg(isEn ? 'Đã tạo PDF tiếng Anh. Bấm "Mở bản tiếng Anh" để xem/tải.' : 'Đã tạo PDF. Bấm "Mở PDF hiện tại" để xem/tải.');
+    setMsg(isEn ? 'Đã tạo PDF khách hàng. Bấm "Mở bản khách hàng" để xem/tải.' : 'Đã tạo PDF nội bộ. Bấm "Mở bản nội bộ" để xem/tải.');
     renderDetail();
     // Thử mở tab mới; nếu bị chặn popup thì link bên dưới vẫn dùng được.
     if (url) window.open(url, '_blank');
