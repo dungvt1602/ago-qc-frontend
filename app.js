@@ -543,7 +543,7 @@ function renderDailyItemCard(sess,it){
   const hasPhoto = Boolean(it.PHOTO_URL || it.PHOTO_FILE_ID);
   const hasData = Boolean(it.PASS_RATE || it.FAIL_RATE || it.REMARKS);
   return `<div class="file-item" onclick="openDailyItemView('${sess.ID}','${it.ITEM_CODE}')">
-    <div class="between"><b>${escapeHtml(it.ITEM_NAME_VI)}</b><span class="pill">${hasPhoto ? 'Đã có ảnh' : 'Chưa có ảnh'}</span></div>
+    <div class="between"><b>${escapeHtml(it.ITEM_NAME_VI)}</b><span class="pill ${hasPhoto ? 'pill-ok' : 'pill-danger'}">${hasPhoto ? 'Đã có ảnh' : 'Chưa có ảnh'}</span></div>
     <div class="muted">${escapeHtml(it.ITEM_NAME_EN)} | ${hasData ? 'Đã nhập kết quả' : 'Chưa nhập kết quả'}</div>
   </div>`;
 }
@@ -602,7 +602,7 @@ function renderContainerItemCard(it){
   const hasPhoto = Boolean(it.PHOTO_URL || it.PHOTO_FILE_ID);
   const hasData = Boolean(it.PASS_RATE || it.FAIL_RATE || it.REMARKS);
   return `<div class="file-item" onclick="openContainerItemView(${no})">
-    <div class="between"><b>${escapeHtml(it.ITEM_NAME_VI)}</b><span class="pill">${hasPhoto ? 'Đã có ảnh' : 'Chưa có ảnh'}</span></div>
+    <div class="between"><b>${escapeHtml(it.ITEM_NAME_VI)}</b><span class="pill ${hasPhoto ? 'pill-ok' : 'pill-danger'}">${hasPhoto ? 'Đã có ảnh' : 'Chưa có ảnh'}</span></div>
     <div class="muted">${escapeHtml(it.DESCRIPTION_VI)} / ${escapeHtml(it.DESCRIPTION_EN)} | ${hasData ? 'Đã nhập kết quả' : 'Chưa nhập kết quả'}</div>
   </div>`;
 }
