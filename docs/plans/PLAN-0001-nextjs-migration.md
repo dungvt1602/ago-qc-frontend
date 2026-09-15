@@ -56,9 +56,27 @@ lại.
 - [x] `npm run lint` + `npm run build` xanh
 
 ### Nhánh `feature/qc-app` — `features/qc`
-- [ ] types, constants, api, hooks (list/detail/mutations/upload)
-- [ ] schemas (qc-file, summary, item-result, daily-session)
-- [ ] utils (image decode/stamp, photo merge, format)
-- [ ] components: files/ detail/ daily/ container/ camera/ shared/
-- [ ] routes `/`, `/qc/new`, `/qc/[id]/...`
-- [ ] `npm run lint` + `npm run build` xanh, kiểm tra trên bề rộng điện thoại
+- [x] types, constants, api, hooks (list/detail/mutations/upload)
+- [x] schemas (qc-file, summary, item-result, daily-session)
+- [x] utils (image decode/stamp, photo-cache, format, qc-file)
+- [x] components: files/ create/ detail/ daily/ container/ camera/ shared/
+- [x] routes `/`, `/qc/new/[type]`, `/qc/[id]` + info/summary/daily/container/export
+- [x] `npm run lint` + `npm run build` xanh
+- [x] Kiểm tra ở bề rộng 375–420px với dữ liệu thật: danh sách, chi tiết, 5 đầu mục, đợt QC,
+      hạng mục, mục container, form tạo (validate 3 ô bắt buộc)
+- [x] Kiểm tra luồng ghi bằng cách chặn XHR (không ghi vào backend thật): lưu mục container
+      → payload đúng `{action, payload}` như bản cũ, cache cập nhật; chụp ảnh giả → popup xem
+      lại (ảnh 1280px có dấu) → "Sử dụng ảnh" hiện ngay dataURL, upload ngầm, xong thay link
+      server + toast; upload lỗi → hoàn ảnh cũ + toast lỗi
+- [ ] Chưa thử: tạo hồ sơ / xuất PDF / xóa thật trên backend (tránh sinh dữ liệu rác);
+      chụp ảnh bằng camera thật trên điện thoại trong webview Zalo/Telegram
+
+## Khác biệt có chủ ý so với bản vanilla
+
+- Mỗi đầu mục / đợt / hạng mục là một URL riêng → nút Back của điện thoại hoạt động,
+  link chia sẻ được. Bản cũ dùng state `section` trong bộ nhớ.
+- Xác nhận xóa bằng dialog trong app thay cho `window.confirm` (một số webview chặn).
+- "Tải lại" ở header chỉ làm mới dữ liệu (invalidate query) thay vì reload cả trang.
+- Ngày QC mặc định lấy theo giờ máy (bản cũ dùng `toISOString` → lệch ngày sau 0h–7h sáng).
+- Hai hằng số `DAILY_ITEMS` / `CONTAINER_ITEMS` trong app.js không được dùng (backend tự tạo
+  hạng mục) → không mang sang.
