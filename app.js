@@ -149,6 +149,7 @@ function fileCard(f){
       <b>${escapeHtml(f.LOT_CODE || f.QC_FILE_NO || '')}</b>
       <span class="row" style="gap:6px;flex-wrap:nowrap">
         <span class="pill">${qcTypeLabel(f.QC_TYPE)}</span>
+        ${orderPill(f)}${donePill(f)}
         <span class="pill">${escapeHtml(f.STATUS || 'DRAFT')}</span>
       </span>
     </div>
@@ -288,6 +289,7 @@ function renderDetail(){
       </div>
       <div class="row" style="margin-top:10px">
         <span class="pill">${qcTypeLabel(f.QC_TYPE)}</span>
+        ${orderPill(f)}${donePill(f)}
         <span class="pill">${escapeHtml(f.STATUS)}</span>
         <span class="pill">Ngày SX: ${escapeHtml(f.TOTAL_PRODUCTION_DAYS || '0')}</span>
         <span class="pill">Kho/cơ sở: ${escapeHtml(f.TOTAL_WAREHOUSES || '0')}</span>
@@ -334,11 +336,59 @@ function renderActiveSection(d){
   }
 }
 
+// ===== Hoàn tất QC (tích hợp checklist) =====
+const orderPill = (f) => f.ORDER_ID ? `<span class="pill">Đơn #${escapeHtml(String(f.ORDER_ID))}</span>` : '';
+const donePill  = (f) => f.QC_DONE_AT ? `<span class="pill pill-ok">🔒 QC xong</span>` : '';
+function isLocked(){ return Boolean(state.current && state.current.qcFile && state.current.qcFile.QC_DONE_AT); }
+// Gọi ở đầu mọi thao tác SỬA: hồ sơ đã hoàn tất thì chặn ngay ở giao diện (backend cũng chặn lần nữa).
+function guardLocked(){
+  if (!isLocked()) return false;
+  showToast('Hồ sơ đã Hoàn tất QC nên đang khóa. Vào "Tổng quan" bấm "Mở lại" nếu cần sửa.', 'error');
+  return true;
+}
+
+function renderCompletionCard(d){
+  const f = d.qcFile;
+  const p = d.progress || { filled: 0, total: 0, units: 0, complete: false, unitLabel: 'đợt QC' };
+  const pct = p.total ? Math.round(p.filled * 100 / p.total) : 0;
+  if (f.QC_DONE_AT) {
+    return `<div class="card" style="border:2px solid #15803d">
+      <div class="between"><h3 style="margin:0">🔒 Đã hoàn tất QC</h3>${orderPill(f)}</div>
+      <div class="note" style="margin-top:6px">Hoàn tất lúc <b>${escapeHtml(f.QC_DONE_AT)}</b>. Hồ sơ đang <b>khóa</b>: không chụp/xóa ảnh, không thêm/xóa phiên, không sửa thông tin. Vẫn xuất PDF bình thường.${f.ORDER_ID ? ' Hệ thống checklist đã có thể đóng đơn sản xuất này.' : ''}</div>
+      <div class="actions" style="margin-top:10px"><button class="ghost danger" onclick="reopenQC()">Mở lại để sửa</button></div>
+    </div>`;
+  }
+  const reason = p.units === 0 ? `Chưa có ${p.unitLabel} nào.` : (p.complete ? '' : `Còn thiếu <b>${p.total - p.filled}</b> ảnh.`);
+  return `<div class="card">
+    <div class="between"><h3 style="margin:0">Hoàn tất QC</h3>${orderPill(f)}</div>
+    <div class="between" style="margin-top:8px"><span>Ảnh đã chụp</span><b>${p.filled}/${p.total} (${pct}%)</b></div>
+    <div class="progress"><i style="width:${pct}%"></i></div>
+    <div class="note" style="margin-top:6px">${p.complete
+      ? 'Đã chụp đủ <b>100%</b> ảnh — có thể hoàn tất. Sau khi hoàn tất, hồ sơ sẽ khóa (vẫn xuất PDF được).'
+      : 'Chỉ hoàn tất được khi chụp đủ <b>100%</b> ảnh. ' + reason}</div>
+    <div class="actions" style="margin-top:10px"><button class="primary" ${p.complete ? '' : 'disabled'} onclick="completeQC()">✅ Hoàn tất QC</button></div>
+  </div>`;
+}
+
+async function completeQC(){
+  const d = state.current;
+  if (!d || !d.progress || !d.progress.complete) { showToast('Chưa đủ 100% ảnh.', 'error'); return; }
+  if (!confirm('Hoàn tất QC hồ sơ này?\n\nSau khi hoàn tất, hồ sơ sẽ KHÓA (không chụp/sửa thêm) và hệ thống checklist sẽ thấy đơn đã QC xong.')) return;
+  try{ state.current = await api('completeQC', { qcFileId: d.qcFile.ID }); setMsg('Đã hoàn tất QC. Hồ sơ đã khóa.'); renderDetail(); }
+  catch(err){ setErr(err); renderDetail(); }
+}
+
+async function reopenQC(){
+  if (!confirm('Mở lại hồ sơ để sửa?\n\nHệ thống checklist sẽ thấy đơn CHƯA QC xong cho tới khi bạn bấm Hoàn tất lại.')) return;
+  try{ state.current = await api('reopenQC', { qcFileId: state.current.qcFile.ID }); setMsg('Đã mở lại hồ sơ.'); renderDetail(); }
+  catch(err){ setErr(err); renderDetail(); }
+}
+
 function renderOverviewSection(d){
   const dailyCount = d.dailySessions.length;
   const dailyPhotoCount = d.dailySessions.flatMap(s => s.items || []).filter(x => x.PHOTO_FILE_ID || x.PHOTO_URL).length;
   const containerPhotoCount = d.containerItems.filter(x => x.PHOTO_FILE_ID || x.PHOTO_URL).length;
-  return `<div class="card">
+  return `${renderCompletionCard(d)}<div class="card">
     <h3>Tổng quan hồ sơ</h3>
     <div class="overview-grid">
       <div class="overview-box"><b>${dailyCount}</b><span>phiên QC</span></div>
@@ -383,6 +433,7 @@ function renderInfoSection(d){
 }
 
 async function saveInfo(){
+  if (guardLocked()) return;
   try{
     const p = getFormData($('infoForm'));
     p.qcFileId = state.current.qcFile.ID;
@@ -406,6 +457,7 @@ function renderSummarySection(d){
 }
 
 async function saveSummary(){
+  if (guardLocked()) return;
   try{
     const p = getFormData($('summaryForm'));
     p.qcFileId = state.current.qcFile.ID;
@@ -417,6 +469,7 @@ async function saveSummary(){
 
 async function addDailyQC(e){
   e.preventDefault();
+  if (guardLocked()) return;
   try{
     const p = getFormData(e.target);
     p.qcFileId = state.current.qcFile.ID;
@@ -509,6 +562,7 @@ function renderSampleCard(sm){
 }
 
 async function addSample(dailyQcId){
+  if (guardLocked()) return;
   try{
     state.current = await api('addSample', { dailyQcId });
     setMsg('Đã thêm mẫu.');
@@ -517,6 +571,7 @@ async function addSample(dailyQcId){
 }
 
 async function deleteSample(sampleId){
+  if (guardLocked()) return;
   if (!confirm('Xóa mẫu này (kèm các ảnh)?')) return;
   try{
     state.current = await api('deleteSample', { sampleId });
@@ -526,11 +581,13 @@ async function deleteSample(sampleId){
 }
 
 function openCameraSample(sampleId, slot, sampleNo){
+  if (guardLocked()) return;
   cameraTarget = { targetType:'sample', sampleId, slot, title:`Mẫu ${sampleNo} - Ảnh ${slot}`, subtitle:'' };
   startCapture();
 }
 
 async function deletePhotoSample(sampleId, slot){
+  if (guardLocked()) return;
   if (!confirm('Xóa ảnh này?')) return;
   try{
     state.current = await api('deletePhoto', { targetType:'sample', sampleId, slot, qcFileId: state.current.qcFile.ID });
@@ -572,6 +629,7 @@ function renderDailyItemDetail(sess){
 }
 
 async function saveDailyItem(dailyQcId,itemCode){
+  if (guardLocked()) return;
   try{
     const payload = {
       dailyQcId,
@@ -633,6 +691,7 @@ function renderContainerItemDetail(d){
 }
 
 async function saveContainerItem(photoNo){
+  if (guardLocked()) return;
   try{
     const payload = {
       qcFileId: state.current.qcFile.ID,
@@ -666,12 +725,14 @@ async function exportPDF(variant){
 }
 
 function openCameraDaily(dailyQcId,itemCode){
+  if (guardLocked()) return;
   const sess = state.current.dailySessions.find(x => x.ID === dailyQcId);
   const item = sess.items.find(x => x.ITEM_CODE === itemCode);
   cameraTarget = { targetType:'daily', dailyQcId, itemCode, title: item.ITEM_NAME_VI, subtitle: `QC ${sess.QC_DATE}` };
   startCapture();
 }
 function openCameraContainer(photoNo){
+  if (guardLocked()) return;
   const it = state.current.containerItems.find(x => Number(x.PHOTO_NO) === Number(photoNo));
   cameraTarget = { targetType:'container', photoNo, title: it.ITEM_NAME_VI, subtitle: it.DESCRIPTION_VI };
   startCapture();
@@ -897,6 +958,7 @@ async function deleteFile(id, lot){
 }
 
 async function saveSession(dailyQcId){
+  if (guardLocked()) return;
   try{
     const p = getFormData($('editDailyForm'));
     p.dailyQcId = dailyQcId;
@@ -907,6 +969,7 @@ async function saveSession(dailyQcId){
 }
 
 async function deleteSession(dailyQcId){
+  if (guardLocked()) return;
   if (!confirm('Xóa phiên QC này? Các hạng mục và ảnh trong phiên sẽ bị xóa.')) return;
   try{
     state.current = await api('deleteDailyQC', { dailyQcId });
@@ -917,6 +980,7 @@ async function deleteSession(dailyQcId){
 }
 
 async function deletePhotoDaily(dailyQcId, itemCode){
+  if (guardLocked()) return;
   if (!confirm('Xóa ảnh của mục này?')) return;
   try{
     state.current = await api('deletePhoto', { targetType:'daily', dailyQcId, itemCode });
@@ -926,6 +990,7 @@ async function deletePhotoDaily(dailyQcId, itemCode){
 }
 
 async function deletePhotoContainer(photoNo){
+  if (guardLocked()) return;
   if (!confirm('Xóa ảnh của mục này?')) return;
   try{
     state.current = await api('deletePhoto', { targetType:'container', qcFileId: state.current.qcFile.ID, photoNo });
@@ -960,6 +1025,8 @@ window.addSample = addSample;
 window.deleteSample = deleteSample;
 window.openCameraSample = openCameraSample;
 window.deletePhotoSample = deletePhotoSample;
+window.completeQC = completeQC;
+window.reopenQC = reopenQC;
 
 // Đăng ký service worker để app cài được như app (PWA).
 if ('serviceWorker' in navigator) {
