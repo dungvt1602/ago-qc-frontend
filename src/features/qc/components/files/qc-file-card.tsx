@@ -6,9 +6,10 @@ import { StatusBadge } from "@/components/shared/status-badge";
 import { ROUTES } from "@/lib/constants";
 import { QC_TYPE_LABEL } from "@/features/qc/constants";
 import { LinkCard } from "@/features/qc/components/shared/link-card";
+import { QcFileFlagBadges } from "@/features/qc/components/shared/qc-file-flag-badges";
 import type { QcFile } from "@/features/qc/types/qc-file";
 
-/* Một thẻ hồ sơ trong danh sách: mã lô, loại, trạng thái, sản phẩm, PO/NCC. */
+/* Một thẻ hồ sơ trong danh sách: mã lô, loại, cờ đơn / QC xong, trạng thái, sản phẩm, PO/NCC. */
 export function QcFileCard({
   file,
   onDelete,
@@ -23,6 +24,7 @@ export function QcFileCard({
       badges={
         <>
           <StatusBadge>{QC_TYPE_LABEL[file.QC_TYPE] ?? QC_TYPE_LABEL.IMPORT}</StatusBadge>
+          <QcFileFlagBadges file={file} />
           <StatusBadge>{file.STATUS || "DRAFT"}</StatusBadge>
         </>
       }

@@ -1,5 +1,6 @@
 "use client";
 
+import { CompletionCard } from "@/features/qc/components/detail/completion-card";
 import { Note, SectionCard } from "@/features/qc/components/shared/section-card";
 import { useQcFileDetail } from "@/features/qc/hooks/use-qc-file";
 import {
@@ -8,7 +9,7 @@ import {
   sessionPhotoCount,
 } from "@/features/qc/utils/qc-file";
 
-/* Màn tổng quan (mặc định khi mở hồ sơ): 4 ô đếm nhanh. */
+/* Màn tổng quan (mặc định khi mở hồ sơ): thẻ Hoàn tất QC + 4 ô đếm nhanh. */
 export function OverviewSection() {
   const detail = useQcFileDetail();
   if (!detail) return null;
@@ -28,7 +29,9 @@ export function OverviewSection() {
   ];
 
   return (
-    <SectionCard title="Tổng quan hồ sơ">
+    <>
+      <CompletionCard detail={detail} />
+      <SectionCard title="Tổng quan hồ sơ">
       <div className="grid gap-2.5 sm:grid-cols-4">
         {boxes.map(([n, label]) => (
           <div
@@ -43,6 +46,7 @@ export function OverviewSection() {
       <Note>
         Bấm từng đầu mục phía trên để nhập thông tin, thêm ngày QC, chụp ảnh hoặc xuất PDF.
       </Note>
-    </SectionCard>
+      </SectionCard>
+    </>
   );
 }

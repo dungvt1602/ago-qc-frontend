@@ -16,6 +16,7 @@ import {
   useDeletePhoto,
   useSaveContainerItem,
 } from "@/features/qc/hooks/use-qc-file-mutations";
+import { useQcLock } from "@/features/qc/hooks/use-qc-lock";
 import type { ContainerItem } from "@/features/qc/types/qc-file";
 import { findContainerItem, hasPhoto } from "@/features/qc/utils/qc-file";
 
@@ -52,6 +53,7 @@ function ItemBody({
   const no = Number(item.PHOTO_NO);
   const save = useSaveContainerItem(qcFileId, no);
   const deletePhoto = useDeletePhoto();
+  const { guard } = useQcLock();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const photo = hasPhoto(item);
 
@@ -87,7 +89,12 @@ function ItemBody({
             {photo ? "Chụp lại" : "Chụp ảnh mục này"}
           </Button>
           {photo ? (
-            <Button variant="destructive" size="lg" className="h-10" onClick={() => setConfirmDelete(true)}>
+            <Button
+              variant="destructive"
+              size="lg"
+              className="h-10"
+              onClick={() => !guard() && setConfirmDelete(true)}
+            >
               <Trash2Icon data-icon="inline-start" />
               Xóa ảnh
             </Button>
@@ -96,7 +103,7 @@ function ItemBody({
         <ItemResultForm
           item={item}
           saving={save.isPending}
-          onSubmit={(v) => save.mutate(v)}
+          onSubmit={(v) => !guard() && save.mutate(v)}
           labels={{ pass: "Tỷ lệ đạt", fail: "Tỷ lệ không đạt" }}
         />
       </div>

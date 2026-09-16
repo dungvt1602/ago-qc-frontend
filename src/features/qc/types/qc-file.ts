@@ -40,6 +40,22 @@ export interface QcFile {
   PDF_URL_EN: string;
   CREATED_AT: string;
   UPDATED_AT: string;
+  /** Thời điểm bấm "Hoàn tất QC"; rỗng = chưa xong. Có giá trị → hồ sơ bị khóa sửa. */
+  QC_DONE_AT?: string;
+  /** Mã đơn bên hệ thống checklist liên kết với hồ sơ này; rỗng = không liên kết. */
+  ORDER_ID?: string | number;
+}
+
+/*
+ * Tiến độ chụp ảnh do backend tính: `filled/total` ảnh, `units` = số đợt QC
+ * (hoặc số mẫu), `complete` = đủ 100% → được phép Hoàn tất.
+ */
+export interface QcProgress {
+  filled: number;
+  total: number;
+  units: number;
+  complete: boolean;
+  unitLabel: string;
 }
 
 /* Thống kê của hồ sơ — form chỉ dùng 4 cột, các cột khác backend vẫn trả. */
@@ -131,4 +147,5 @@ export interface QcFileDetail {
   summary?: QcSummary;
   dailySessions: DailySession[];
   containerItems: ContainerItem[];
+  progress?: QcProgress;
 }

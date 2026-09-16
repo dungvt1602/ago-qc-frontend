@@ -6,9 +6,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { ROUTES } from "@/lib/constants";
 import { QC_TYPE_LABEL } from "@/features/qc/constants";
+import { QcFileFlagBadges } from "@/features/qc/components/shared/qc-file-flag-badges";
 import type { QcFile } from "@/features/qc/types/qc-file";
 
-/* Thẻ đầu trang chi tiết: mã lô, mã hồ sơ, nhãn loại/trạng thái/số ngày/kho, link PDF. */
+/* Thẻ đầu trang chi tiết: mã lô, mã hồ sơ, nhãn loại / cờ đơn & QC xong / trạng thái / số ngày / kho, link PDF. */
 export function QcFileHeader({ file }: { file: QcFile }) {
   return (
     <Card>
@@ -35,6 +36,7 @@ export function QcFileHeader({ file }: { file: QcFile }) {
         </div>
         <div className="flex flex-wrap gap-1.5">
           <StatusBadge>{QC_TYPE_LABEL[file.QC_TYPE] ?? QC_TYPE_LABEL.IMPORT}</StatusBadge>
+          <QcFileFlagBadges file={file} />
           <StatusBadge>{file.STATUS}</StatusBadge>
           <StatusBadge>Ngày SX: {file.TOTAL_PRODUCTION_DAYS || "0"}</StatusBadge>
           <StatusBadge>Kho/cơ sở: {file.TOTAL_WAREHOUSES || "0"}</StatusBadge>

@@ -6,11 +6,13 @@ import { apiErrorMessage } from "@/lib/api-error";
 import {
   addDailyQC,
   addSample,
+  completeQC,
   createQCFile,
   deleteDailyQC,
   deletePhoto,
   deleteSample,
   exportPDF,
+  reopenQC,
   saveContainerItem,
   saveDailyQCItem,
   updateDailyQC,
@@ -192,5 +194,26 @@ export function useExportPdf(qcFileId: string) {
         variant === "en" ? detail.qcFile.PDF_URL_EN : detail.qcFile.PDF_URL;
       if (url) window.open(url, "_blank");
     },
+  });
+}
+
+/* ===== Hoàn tất QC ===== */
+
+/* Nhãn "QC xong" hiện cả trên thẻ danh sách → invalidate danh sách. */
+export function useCompleteQc(qcFileId: string) {
+  return useDetailMutation({
+    mutationFn: () => completeQC(qcFileId),
+    successMessage: "Đã hoàn tất QC. Hồ sơ đã khóa.",
+    errorFallback: "Không hoàn tất được QC.",
+    invalidateList: true,
+  });
+}
+
+export function useReopenQc(qcFileId: string) {
+  return useDetailMutation({
+    mutationFn: () => reopenQC(qcFileId),
+    successMessage: "Đã mở lại hồ sơ.",
+    errorFallback: "Không mở lại được hồ sơ.",
+    invalidateList: true,
   });
 }

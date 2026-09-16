@@ -154,3 +154,15 @@ export function deletePhoto(payload: DeletePhotoPayload) {
 export function exportPDF(qcFileId: string, variant: PdfVariant) {
   return callQc<QcFileDetail>("exportPDF", { qcFileId, variant });
 }
+
+/* ===== Hoàn tất QC (tích hợp checklist) ===== */
+
+/* Chỉ gọi được khi `progress.complete`; backend đặt QC_DONE_AT và khóa hồ sơ. */
+export function completeQC(qcFileId: string) {
+  return callQc<QcFileDetail>("completeQC", { qcFileId });
+}
+
+/* Mở khóa để sửa tiếp; bên checklist sẽ thấy đơn CHƯA QC xong cho tới khi hoàn tất lại. */
+export function reopenQC(qcFileId: string) {
+  return callQc<QcFileDetail>("reopenQC", { qcFileId });
+}

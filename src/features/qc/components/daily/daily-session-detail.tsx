@@ -21,6 +21,7 @@ import {
   useDeleteSample,
   useUpdateDailySession,
 } from "@/features/qc/hooks/use-qc-file-mutations";
+import { useQcLock } from "@/features/qc/hooks/use-qc-lock";
 import {
   dailySessionSchema,
   type DailySessionInput,
@@ -71,13 +72,22 @@ function SessionBody({ detail, session }: { detail: QcFileDetail; session: Daily
   const addSample = useAddSample();
   const deleteSample = useDeleteSample();
   const deletePhoto = useDeletePhoto();
+  const { guard } = useQcLock();
   const [pending, setPending] = useState<PendingAction | null>(null);
 
   const form = useForm<DailySessionInput>({
     resolver: zodResolver(dailySessionSchema),
     defaultValues: { qcDate: session.QC_DATE },
   });
-  const saveSession = form.handleSubmit((v) => update.mutate(v.qcDate));
+  const saveSession = form.handleSubmit((v) => {
+    if (guard()) return;
+    update.mutate(v.qcDate);
+  });
+  /* Hỏi xác nhận xóa — hồ sơ khóa thì báo ngay, không mở hộp thoại. */
+  const askDelete = (action: PendingAction) => {
+    if (guard()) return;
+    setPending(action);
+  };
 
   const confirmMeta = (a: PendingAction) => {
     switch (a.kind) {
@@ -137,7 +147,7 @@ function SessionBody({ detail, session }: { detail: QcFileDetail; session: Daily
         <Button
           variant="destructive"
           size="lg"
-          onClick={() => setPending({ kind: "deleteSession" })}
+          onClick={() => askDelete({ kind: "deleteSession" })}
           disabled={remove.isPending}
         >
           <Trash2Icon data-icon="inline-start" />
@@ -148,7 +158,14 @@ function SessionBody({ detail, session }: { detail: QcFileDetail; session: Daily
       {isImport ? (
         <>
           <div>
-            <Button size="lg" onClick={() => addSample.mutate(session.ID)} disabled={addSample.isPending}>
+            <Button
+              size="lg"
+              onClick={() => {
+                if (guard()) return;
+                addSample.mutate(session.ID);
+              }}
+              disabled={addSample.isPending}
+            >
               <PlusIcon data-icon="inline-start" />
               Thêm mẫu
             </Button>
@@ -159,8 +176,8 @@ function SessionBody({ detail, session }: { detail: QcFileDetail; session: Daily
                 <SampleCard
                   key={sm.ID}
                   sample={sm}
-                  onDeleteSample={(sample) => setPending({ kind: "deleteSample", sample })}
-                  onDeletePhoto={(sample, slot) => setPending({ kind: "deletePhoto", sample, slot })}
+                  onDeleteSample={(sample) => askDelete({ kind: "deleteSample", sample })}
+                  onDeletePhoto={(sample, slot) => askDelete({ kind: "deletePhoto", sample, slot })}
                 />
               ))}
             </div>

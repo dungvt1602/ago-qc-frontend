@@ -15,6 +15,7 @@ import {
 } from "@/features/qc/components/shared/section-card";
 import { useQcFileDetail } from "@/features/qc/hooks/use-qc-file";
 import { useAddDailySession } from "@/features/qc/hooks/use-qc-file-mutations";
+import { useQcLock } from "@/features/qc/hooks/use-qc-lock";
 import {
   dailySessionSchema,
   type DailySessionInput,
@@ -25,6 +26,7 @@ import { today } from "@/features/qc/utils/format";
 export function DailySection() {
   const detail = useQcFileDetail();
   const add = useAddDailySession(detail?.qcFile.ID ?? "");
+  const { guard } = useQcLock();
   const form = useForm<DailySessionInput>({
     resolver: zodResolver(dailySessionSchema),
     defaultValues: { qcDate: today() },
@@ -48,7 +50,10 @@ export function DailySection() {
       <form
         className="flex flex-wrap items-end gap-2.5"
         noValidate
-        onSubmit={form.handleSubmit((v) => add.mutate(v.qcDate))}
+        onSubmit={form.handleSubmit((v) => {
+          if (guard()) return;
+          add.mutate(v.qcDate);
+        })}
       >
         <TextField
           label="Ngày QC / QC date"

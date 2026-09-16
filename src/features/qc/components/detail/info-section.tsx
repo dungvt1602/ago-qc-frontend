@@ -9,6 +9,7 @@ import { QcFileInfoFields } from "@/features/qc/components/shared/qc-file-info-f
 import { SectionCard } from "@/features/qc/components/shared/section-card";
 import { useQcFileDetail } from "@/features/qc/hooks/use-qc-file";
 import { useUpdateQcFileInfo } from "@/features/qc/hooks/use-qc-file-mutations";
+import { useQcLock } from "@/features/qc/hooks/use-qc-lock";
 import {
   infoInputToPayload,
   qcFileInfoSchema,
@@ -26,14 +27,16 @@ export function InfoSection() {
 
 function InfoForm({ file }: { file: QcFile }) {
   const update = useUpdateQcFileInfo(file.ID);
+  const { guard } = useQcLock();
   const form = useForm<QcFileInfoInput>({
     resolver: zodResolver(qcFileInfoSchema),
     defaultValues: qcFileToInfoInput(file),
   });
 
-  const submit = form.handleSubmit((input) =>
-    update.mutate(infoInputToPayload(input, file.QC_TYPE)),
-  );
+  const submit = form.handleSubmit((input) => {
+    if (guard()) return;
+    update.mutate(infoInputToPayload(input, file.QC_TYPE));
+  });
 
   return (
     <SectionCard

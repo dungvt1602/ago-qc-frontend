@@ -8,6 +8,7 @@ import { TextAreaField, TextField } from "@/features/qc/components/shared/form-f
 import { SectionCard } from "@/features/qc/components/shared/section-card";
 import { useQcFileDetail } from "@/features/qc/hooks/use-qc-file";
 import { useUpdateSummary } from "@/features/qc/hooks/use-qc-file-mutations";
+import { useQcLock } from "@/features/qc/hooks/use-qc-lock";
 import {
   summarySchema,
   summaryToInput,
@@ -24,12 +25,16 @@ export function SummarySection() {
 
 function SummaryForm({ detail }: { detail: QcFileDetail }) {
   const update = useUpdateSummary(detail.qcFile.ID);
+  const { guard } = useQcLock();
   const form = useForm<SummaryInput>({
     resolver: zodResolver(summarySchema),
     defaultValues: summaryToInput(detail.summary),
   });
   const errors = form.formState.errors;
-  const submit = form.handleSubmit((v) => update.mutate(v));
+  const submit = form.handleSubmit((v) => {
+    if (guard()) return;
+    update.mutate(v);
+  });
 
   return (
     <SectionCard

@@ -11,9 +11,11 @@ import { toast } from "sonner";
 import { PendingPill } from "@/components/shared/pending-indicator";
 import { CameraPreviewDialog } from "@/features/qc/components/camera/camera-preview-dialog";
 import { usePhotoUpload } from "@/features/qc/hooks/use-photo-upload";
+import { QC_LOCKED_MESSAGE } from "@/features/qc/hooks/use-qc-lock";
 import type { CameraTarget } from "@/features/qc/types/camera";
 import type { QcFile } from "@/features/qc/types/qc-file";
 import { makeStampLines, processCaptureFile } from "@/features/qc/utils/image";
+import { isQcLocked } from "@/features/qc/utils/qc-file";
 
 /*
  * Luồng chụp ảnh của một hồ sơ, đặt trong layout `/qc/[id]` để mọi màn con
@@ -25,6 +27,9 @@ import { makeStampLines, processCaptureFile } from "@/features/qc/utils/image";
  *
  * Chụp xong: xử lý ảnh (giảm cỡ + đóng dấu, có timeout) → popup xem lại →
  * "Sử dụng ảnh" gọi upload lạc quan (usePhotoUpload) rồi đóng popup ngay.
+ *
+ * Hồ sơ đã Hoàn tất QC → `openCamera` từ chối ngay (toast) — chặn một chỗ
+ * cho cả ba loại đích (hạng mục ngày / mẫu / container).
  */
 interface CameraContextValue {
   openCamera: (target: CameraTarget) => void;
@@ -59,12 +64,17 @@ export function CameraProvider({
     input.click();
   }, []);
 
+  const locked = isQcLocked(qcFile);
   const openCamera = useCallback(
     (target: CameraTarget) => {
+      if (locked) {
+        toast.error(QC_LOCKED_MESSAGE);
+        return;
+      }
       targetRef.current = target;
       startCapture();
     },
-    [startCapture],
+    [locked, startCapture],
   );
 
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {

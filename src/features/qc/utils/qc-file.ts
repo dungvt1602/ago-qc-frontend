@@ -2,12 +2,18 @@ import { CONTAINER_PHOTOS_PER_PDF_PAGE } from "@/features/qc/constants";
 import type {
   DailySession,
   PhotoFields,
+  QcFile,
   QcFileDetail,
   QcSample,
   ResultFields,
 } from "@/features/qc/types/qc-file";
 
 /* Util thuần đọc dữ liệu hồ sơ — không side-effect, dùng chung nhiều màn. */
+
+/* Hồ sơ đã "Hoàn tất QC" → khóa mọi thao tác sửa (vẫn xuất PDF được). */
+export function isQcLocked(file?: QcFile): boolean {
+  return Boolean(file?.QC_DONE_AT);
+}
 
 export function hasPhoto(item: PhotoFields): boolean {
   return Boolean(item.PHOTO_URL || item.PHOTO_FILE_ID);
