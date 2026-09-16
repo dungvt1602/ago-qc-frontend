@@ -184,8 +184,10 @@ thích làm gì và quy tắc nghiệp vụ / kiến trúc liên quan. Không co
 ## CI/CD Rule
 
 - CI: `.github/workflows/ci.yml` chạy `npm ci → lint → build` khi push/PR vào `main`/`dev`.
-- CD: chưa có. Khi cần demo, nối repo với Vercel (đặt `NEXT_PUBLIC_API_URL` / `BACKEND_URL`
-  trong dashboard).
+- CD: Netlify (`https://ago-qc.netlify.app`) deploy tự động từ nhánh `main`, cấu hình trong
+  `netlify.toml` (build Next.js bằng Next.js Runtime của Netlify; `NEXT_PUBLIC_API_URL` /
+  `BACKEND_URL` khai báo ngay trong file đó). Đổi backend URL → sửa `netlify.toml`, không sửa
+  dashboard.
 
 ## Git Workflow Rule
 

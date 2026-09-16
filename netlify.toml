@@ -1,0 +1,19 @@
+# Cấu hình deploy trên Netlify (site ago-qc.netlify.app).
+#
+# Site này trước đây là app vanilla (index.html ở gốc repo) nên Netlify chỉ copy file tĩnh.
+# Từ khi chuyển sang Next.js, phải BUILD rồi chạy bằng Next.js Runtime của Netlify
+# (@netlify/plugin-nextjs — Netlify tự cài khi thấy khai báo ở đây): trang động và Route Handler
+# /api chạy trên Netlify Functions. File này ghi đè "Build command" / "Publish directory" trong dashboard.
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  # Next.js 16 cần Node >= 20.9
+  NODE_VERSION = "22"
+  # Trình duyệt gọi thẳng backend (backend đã bật CORS) — giống bản vanilla; xem .env.example.
+  NEXT_PUBLIC_API_URL = "https://ago-qc-backend.onrender.com/api"
+  BACKEND_URL = "https://ago-qc-backend.onrender.com"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
