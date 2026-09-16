@@ -40,9 +40,28 @@ ago-qc-frontend/
 │   │   ├── manifest.ts           # Web App Manifest (PWA)
 │   │   ├── loading.tsx · error.tsx · not-found.tsx
 │   │   ├── globals.css           # Tailwind + theme xanh AGO (CSS variables)
-│   │   └── api/[[...path]]/route.ts   # Proxy same-origin /api → BACKEND_URL
-│   ├── features/                 # ★ Nghiệp vụ theo module (features/qc — nhánh tính năng)
-│   │   └── <module>/  api/ components/<sub-domain>/ hooks/ schemas/ types/ utils/ constants.ts
+│   │   ├── api/[[...path]]/route.ts   # Proxy same-origin /api → BACKEND_URL
+│   │   ├── qc/new/[type]/page.tsx     # /qc/new/import · /qc/new/export
+│   │   └── qc/[id]/              # layout (header + menu đầu mục) + page (tổng quan)
+│   │       ├── info/ summary/ export/      # đầu mục A, B, E
+│   │       ├── daily/[sessionId]/[itemCode]/  # đợt QC → hạng mục (hàng xuất) / mẫu (hàng nhập)
+│   │       └── container/[photoNo]/        # 21 mục ảnh container
+│   ├── features/qc/              # ★ Nghiệp vụ hồ sơ QC
+│   │   ├── api/qc-api.ts         # Gọi backend `{ action, payload }` — nơi duy nhất biết tên action
+│   │   ├── hooks/                # query-keys, use-qc-files, use-qc-file, use-qc-file-mutations,
+│   │   │                         #   use-photo-upload (optimistic)
+│   │   ├── schemas/              # Zod: qc-file, summary, item-result, daily-session
+│   │   ├── types/                # qc-file (khớp cột backend), camera
+│   │   ├── utils/                # image (decode/nén/đóng dấu), photo-cache, format, qc-file
+│   │   ├── constants.ts          # tham số nén ảnh, thứ tự đầu mục theo loại hồ sơ
+│   │   └── components/
+│   │       ├── files/            # danh sách hồ sơ
+│   │       ├── create/           # tạo hồ sơ
+│   │       ├── detail/           # layout hồ sơ, header, step-menu, tổng quan, info, summary, export
+│   │       ├── daily/            # đợt QC, hạng mục, mẫu
+│   │       ├── container/        # mục ảnh container
+│   │       ├── camera/           # CameraProvider (input file + popup xem lại)
+│   │       └── shared/           # section-card, link-card, form-field, item-result-form, saved-photo...
 │   ├── components/
 │   │   ├── ui/                   # shadcn/ui — không sửa tay
 │   │   ├── layout/               # app-shell, app-header, brand-mark

@@ -1,11 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import { Baloo_2, Be_Vietnam_Pro, Geist_Mono } from "next/font/google";
 import { AppProviders } from "@/providers/app-providers";
+import { AppShell } from "@/components/layout/app-shell";
 import { ServiceWorkerRegister } from "@/components/pwa/service-worker-register";
 import {
   APP_DESCRIPTION,
   APP_NAME,
   APP_SHORT_NAME,
+  APP_TAGLINE,
   BRAND_THEME_COLOR,
 } from "@/lib/constants";
 import "./globals.css";
@@ -63,8 +65,10 @@ export const viewport: Viewport = {
 };
 
 /*
- * Root layout: font + provider toàn cục (TanStack Query, Toaster) + đăng ký
- * service worker. Khung app (header, main) do AppShell trong từng route dựng.
+ * Root layout: font + provider toàn cục (TanStack Query, Toaster) + khung app
+ * (header dính, vùng nội dung, chỉ báo đang xử lý) + đăng ký service worker.
+ * App chỉ có một khung cho mọi màn nên AppShell đặt ngay đây; page.tsx chỉ
+ * render component từ features/.
  */
 export default function RootLayout({
   children,
@@ -77,7 +81,9 @@ export default function RootLayout({
       className={`${beVietnam.variable} ${baloo.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <AppProviders>{children}</AppProviders>
+        <AppProviders>
+          <AppShell subtitle={APP_TAGLINE}>{children}</AppShell>
+        </AppProviders>
         <ServiceWorkerRegister />
       </body>
     </html>
