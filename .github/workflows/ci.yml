@@ -1,0 +1,36 @@
+# CI cho AGO QC Frontend
+# Chạy khi push / mở PR vào main, dev: cài deps → lint → build (type check).
+# Build KHÔNG cần backend chạy: API chỉ được gọi lúc runtime (client).
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+
+jobs:
+  lint-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build (type check + production build)
+        run: npm run build
+        env:
+          BACKEND_URL: https://ago-qc-backend.onrender.com
+          NEXT_PUBLIC_API_URL: ""
