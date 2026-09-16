@@ -201,8 +201,8 @@ export function useExportPdf(qcFileId: string) {
 
 /* Nhãn "QC xong" hiện cả trên thẻ danh sách → invalidate danh sách. */
 export function useCompleteQc(qcFileId: string) {
-  return useDetailMutation({
-    mutationFn: () => completeQC(qcFileId),
+  return useDetailMutation<string>({
+    mutationFn: (doneBy) => completeQC(qcFileId, doneBy),
     successMessage: "Đã hoàn tất QC. Hồ sơ đã khóa.",
     errorFallback: "Không hoàn tất được QC.",
     invalidateList: true,

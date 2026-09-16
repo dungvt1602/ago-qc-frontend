@@ -20,8 +20,9 @@ export function QcFileHeader({ file }: { file: QcFile }) {
               {file.LOT_CODE}
             </h2>
             <p className="pt-0.5 text-xs text-muted-foreground">
-              Mã hồ sơ: {file.QC_FILE_NO} | PDF tự tăng trang theo số ngày/kho QC và
-              số ảnh thực tế.
+              Mã hồ sơ: {file.QC_FILE_NO}
+              {file.CREATED_BY ? <> | Mở hồ sơ: {file.CREATED_BY} (checklist)</> : null} | PDF
+              tự tăng trang theo số ngày/kho QC và số ảnh thực tế.
             </p>
           </div>
           <Button

@@ -44,6 +44,10 @@ export interface QcFile {
   QC_DONE_AT?: string;
   /** Mã đơn bên hệ thống checklist liên kết với hồ sơ này; rỗng = không liên kết. */
   ORDER_ID?: string | number;
+  /** Tên người bấm "Hoàn tất QC" (app hỏi lúc bấm); checklist hiện "QC xong bởi ...". */
+  QC_DONE_BY?: string;
+  /** Tên người bấm "Tạo đơn QC" bên checklist (CreateQC.created_by_name); rỗng = tạo tay trong app. */
+  CREATED_BY?: string;
 }
 
 /*

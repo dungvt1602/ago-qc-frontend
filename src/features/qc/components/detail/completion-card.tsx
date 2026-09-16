@@ -4,6 +4,16 @@ import { useState } from "react";
 import { CheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { ConfirmDialog } from "@/components/shared/confirm-dialog";
 import { OrderBadge } from "@/features/qc/components/shared/qc-file-flag-badges";
 import { Note } from "@/features/qc/components/shared/section-card";
@@ -18,8 +28,9 @@ import { isQcLocked } from "@/features/qc/utils/qc-file";
  * Thẻ "Hoàn tất QC" trên màn Tổng quan (bản vanilla: `renderCompletionCard`) —
  * điểm tích hợp với hệ thống checklist:
  *  - Chưa xong: tiến độ ảnh x/y (%), thanh %, nút Hoàn tất chỉ bật khi đủ 100%.
- *  - Đã xong: viền xanh, thời điểm hoàn tất, giải thích khóa, nút Mở lại để sửa.
- * Cả hai nút đều qua ConfirmDialog vì đổi trạng thái mà bên checklist nhìn thấy.
+ *  - Đã xong: viền xanh, thời điểm + người hoàn tất, giải thích khóa, nút Mở lại để sửa.
+ * Hoàn tất hỏi TÊN người bấm (app chưa có đăng nhập; checklist hiện "QC xong bởi ..."),
+ * điền sẵn Nhân viên QC của hồ sơ. Mở lại qua ConfirmDialog. Cả hai đổi trạng thái mà checklist nhìn thấy.
  */
 const EMPTY_PROGRESS: QcProgress = {
   filled: 0,
@@ -35,6 +46,7 @@ export function CompletionCard({ detail }: { detail: QcFileDetail }) {
   const complete = useCompleteQc(file.ID);
   const reopen = useReopenQc(file.ID);
   const [confirm, setConfirm] = useState<"complete" | "reopen" | null>(null);
+  const [doneBy, setDoneBy] = useState("");
 
   const pct = progress.total ? Math.round((progress.filled * 100) / progress.total) : 0;
   const locked = isQcLocked(file);
@@ -53,7 +65,8 @@ export function CompletionCard({ detail }: { detail: QcFileDetail }) {
           {locked ? (
             <>
               <Note>
-                Hoàn tất lúc <b>{file.QC_DONE_AT}</b>. Hồ sơ đang <b>khóa</b>: không chụp/xóa
+                Hoàn tất lúc <b>{file.QC_DONE_AT}</b>
+                {file.QC_DONE_BY ? <> bởi <b>{file.QC_DONE_BY}</b></> : null}. Hồ sơ đang <b>khóa</b>: không chụp/xóa
                 ảnh, không thêm/xóa phiên, không sửa thông tin. Vẫn xuất PDF bình thường.
                 {file.ORDER_ID ? " Hệ thống checklist đã có thể đóng đơn sản xuất này." : ""}
               </Note>
@@ -102,7 +115,10 @@ export function CompletionCard({ detail }: { detail: QcFileDetail }) {
                   size="lg"
                   className="h-10"
                   disabled={!progress.complete || complete.isPending}
-                  onClick={() => setConfirm("complete")}
+                  onClick={() => {
+                    setDoneBy(file.QC_STAFF || "");
+                    setConfirm("complete");
+                  }}
                 >
                   <CheckIcon data-icon="inline-start" />
                   Hoàn tất QC
@@ -113,16 +129,46 @@ export function CompletionCard({ detail }: { detail: QcFileDetail }) {
         </CardContent>
       </Card>
 
-      <ConfirmDialog
+      <Dialog
         open={confirm === "complete"}
         onOpenChange={(open) => !open && setConfirm(null)}
-        title="Hoàn tất QC hồ sơ này?"
-        description={
-          "Sau khi hoàn tất, hồ sơ sẽ KHÓA (không chụp/sửa thêm) và hệ thống checklist sẽ thấy đơn đã QC xong."
-        }
-        confirmLabel="Hoàn tất QC"
-        onConfirm={() => complete.mutate()}
-      />
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Hoàn tất QC hồ sơ này?</DialogTitle>
+            <DialogDescription>
+              Sau khi hoàn tất, hồ sơ sẽ KHÓA (không chụp/sửa thêm) và hệ thống checklist sẽ
+              thấy đơn đã QC xong.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="qc-done-by">Tên người hoàn tất QC</Label>
+            <Input
+              id="qc-done-by"
+              value={doneBy}
+              maxLength={120}
+              autoFocus
+              onChange={(e) => setDoneBy(e.target.value)}
+              placeholder="Nhập tên"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" size="lg" onClick={() => setConfirm(null)}>
+              Hủy
+            </Button>
+            <Button
+              size="lg"
+              disabled={!doneBy.trim() || complete.isPending}
+              onClick={() => {
+                complete.mutate(doneBy.trim());
+                setConfirm(null);
+              }}
+            >
+              Hoàn tất QC
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <ConfirmDialog
         open={confirm === "reopen"}
         onOpenChange={(open) => !open && setConfirm(null)}
