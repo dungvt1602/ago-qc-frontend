@@ -7,10 +7,15 @@ import type { QcType } from "@/features/qc/types/qc-file";
 
 /*
  * Nén ảnh trước khi gửi lên backend. Mục tiêu: ảnh đủ rõ để làm hồ sơ QC,
- * nhưng PDF không quá nặng. Giữ đúng tham số bản vanilla.
+ * nhưng PDF không quá nặng.
+ *
+ * 1024px / JPEG 0.72 là đúng cỡ ảnh mà bản PDF cũ (Chrome) từng thu nhỏ rồi in;
+ * backend giờ nhúng NGUYÊN ảnh trong Storage vào PDF (không thu nhỏ nữa), nên
+ * kích thước ảnh lúc chụp quyết định thẳng dung lượng PDF (~130KB/ảnh).
+ * Ô ảnh trên A4 chỉ ~6cm nên 1024px vẫn dư nét. (Trước đây: 1280 / 0.7.)
  */
-export const PHOTO_MAX_SIDE = 1280;
-export const PHOTO_JPEG_QUALITY = 0.7;
+export const PHOTO_MAX_SIDE = 1024;
+export const PHOTO_JPEG_QUALITY = 0.72;
 /* Quá thời gian này coi như webview xử lý ảnh bị treo → báo chụp lại. */
 export const PHOTO_PROCESS_TIMEOUT_MS = 30_000;
 
